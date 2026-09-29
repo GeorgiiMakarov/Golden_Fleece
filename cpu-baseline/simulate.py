@@ -309,7 +309,7 @@ def main(scheme="sl", vort_eps=0.0, buoy_beta=0.0, steps=240, solver="jacobi", i
     vel, s, chi = init_fields()
     T = make_temperature() if buoy_beta > 0 else None
     p = np.zeros((N, N, N), dtype=np.float64)  # persistent pressure (warm start)
-    cmap = cm.get_cmap("inferno")
+    cmap = matplotlib.colormaps["inferno"]
     checks = []
     t0 = time.time()
 
