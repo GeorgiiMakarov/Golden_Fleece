@@ -1,0 +1,57 @@
+// Buoyancy.compute — Fluid Preset Studio, upgrade #3
+//
+// Fedkiw-style buoyancy: F = beta * (T - T_amb) * up (+Y axis), u += dt * F.
+//
+// Temperature is a separate RFloat field. It is initialized once by
+// InitTemperature (hot sphere, resolution-relative: center (0.25N, 0.25N, 0.5N),
+// radius 0.125N — matches the CPU reference: (8,8,16) r=4 at N=32) and then
+// advected/diffused every step with the baseline advection/diffusion shaders,
+// exactly like dye. This file holds only the init and force kernels.
+//
+// CPU-validated 2026-09-27: beta=0.5 stable (visible rising thermal plume,
+// KE x1.013, scalar in [0,1]); beta=2.0 pumps too much energy (div 0.30,
+// max|v| 5.6 — killed).
+//
+// beta is PROVISIONAL: tuned on 32^3 against 50 Jacobi iterations. Jacobi needs
+// O(N^2) iterations for fixed accuracy, so at bake resolutions (64-128^3) the
+// same 50 iterations are a relatively weaker solver and the stability margin
+// shifts. Retune once after RBGS/multigrid (upgrade #5).
+//
+// NOT run in Unity Editor yet.
+#pragma kernel InitTemperature
+#pragma kernel ApplyBuoyancy
+
+// InitTemperature
+RWTexture3D<float> InitResult;
+int3 dims;
+
+// ApplyBuoyancy
+Texture3D<float4> Velocity;    // in
+Texture3D<float>  Temperature; // in
+RWTexture3D<float4> Result;    // out
+float dt;
+float beta;
+float t_ambient;
+
+[numthreads(8,8,8)]
+void InitTemperature(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= dims.x || id.y >= dims.y || id.z >= dims.z) return;
+
+    float3 c = float3(dims) * float3(0.25, 0.25, 0.5);
+    float r = float(dims.x) * 0.125;
+    float d = length(float3(id) + 0.5 - c);
+    InitResult[int3(id)] = (d < r) ? 1.0 : 0.0;
+}
+
+[numthreads(8,8,8)]
+void ApplyBuoyancy(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= dims.x || id.y >= dims.y || id.z >= dims.z) return;
+    int3 p = int3(id);
+
+    float4 vel = Velocity.Load(int4(p, 0));
+    float T = Temperature.Load(int4(p, 0));
+    vel.y += dt * beta * (T - t_ambient);  // +Y is up
+    Result[p] = vel;
+}

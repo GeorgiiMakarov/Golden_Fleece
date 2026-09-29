@@ -1,0 +1,1 @@
+{"allowUnsafeCode":false,"autoReferenced":true,"defineConstraints":[],"excludePlatforms":[],"includePlatforms":["Editor"],"name":"Fluid.Tests.EditMode","noEngineReferences":false,"overrideReferences":false,"precompiledReferences":[],"references":["UnityEngine.TestRunner","UnityEditor.TestRunner"],"rootNamespace":"","versionDefines":[]}

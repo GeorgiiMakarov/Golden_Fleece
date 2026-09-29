@@ -1,0 +1,109 @@
+// Advection.compute
+#pragma kernel AdvectScalar
+#pragma kernel AdvectVector
+
+// scalar advected by velocity
+Texture3D<float4> VelocityRGBA; // velocity stored as float4 (xyz = u,v,w)
+Texture3D<float> Field;         // scalar field
+RWTexture3D<float> ResultField; // advected scalar (out)
+
+// vector advected by itself (velocity), stored as float4
+Texture3D<float4> FieldVec;     // vector field (e.g. velocity)
+RWTexture3D<float4> ResultVec;  // advected vector (out)
+
+int3 dims;
+float dt;
+float dx;
+
+float3 ReadVelocity(int3 p)
+{
+    float4 v = VelocityRGBA.Load(int4(p.x, p.y, p.z, 0));
+    return v.xyz;
+}
+
+float SampleFieldFloat3(float3 pos)
+{
+    // pos in grid coords (0..dims-1)
+    pos = clamp(pos, float3(0,0,0), float3(dims) - 1);
+    int3 p0 = int3(floor(pos));
+    int3 p1 = min(p0 + 1, dims - 1);
+
+    float xd = pos.x - p0.x;
+    float yd = pos.y - p0.y;
+    float zd = pos.z - p0.z;
+
+    float c000 = Field.Load(int4(p0.x, p0.y, p0.z, 0));
+    float c100 = Field.Load(int4(p1.x, p0.y, p0.z, 0));
+    float c010 = Field.Load(int4(p0.x, p1.y, p0.z, 0));
+    float c110 = Field.Load(int4(p1.x, p1.y, p0.z, 0));
+    float c001 = Field.Load(int4(p0.x, p0.y, p1.z, 0));
+    float c101 = Field.Load(int4(p1.x, p0.y, p1.z, 0));
+    float c011 = Field.Load(int4(p0.x, p1.y, p1.z, 0));
+    float c111 = Field.Load(int4(p1.x, p1.y, p1.z, 0));
+
+    float c00 = lerp(c000, c100, xd);
+    float c10 = lerp(c010, c110, xd);
+    float c01 = lerp(c001, c101, xd);
+    float c11 = lerp(c011, c111, xd);
+
+    float c0 = lerp(c00, c10, yd);
+    float c1 = lerp(c01, c11, yd);
+
+    return lerp(c0, c1, zd);
+}
+
+float4 SampleFieldVec3(float3 pos)
+{
+    pos = clamp(pos, float3(0,0,0), float3(dims) - 1);
+    int3 p0 = int3(floor(pos));
+    int3 p1 = min(p0 + 1, dims - 1);
+
+    float xd = pos.x - p0.x;
+    float yd = pos.y - p0.y;
+    float zd = pos.z - p0.z;
+
+    float4 c000 = FieldVec.Load(int4(p0.x, p0.y, p0.z, 0));
+    float4 c100 = FieldVec.Load(int4(p1.x, p0.y, p0.z, 0));
+    float4 c010 = FieldVec.Load(int4(p0.x, p1.y, p0.z, 0));
+    float4 c110 = FieldVec.Load(int4(p1.x, p1.y, p0.z, 0));
+    float4 c001 = FieldVec.Load(int4(p0.x, p0.y, p1.z, 0));
+    float4 c101 = FieldVec.Load(int4(p1.x, p0.y, p1.z, 0));
+    float4 c011 = FieldVec.Load(int4(p0.x, p1.y, p1.z, 0));
+    float4 c111 = FieldVec.Load(int4(p1.x, p1.y, p1.z, 0));
+
+    float4 c00 = lerp(c000, c100, xd);
+    float4 c10 = lerp(c010, c110, xd);
+    float4 c01 = lerp(c001, c101, xd);
+    float4 c11 = lerp(c011, c111, xd);
+
+    float4 c0 = lerp(c00, c10, yd);
+    float4 c1 = lerp(c01, c11, yd);
+
+    return lerp(c0, c1, zd);
+}
+
+[numthreads(8,8,8)]
+void AdvectScalar(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= dims.x || id.y >= dims.y || id.z >= dims.z) return;
+
+    int3 p = int3(id.x, id.y, id.z);
+    float3 vel = ReadVelocity(p);
+    float3 prevPos = (float3)p - vel * (dt / dx);
+
+    float val = SampleFieldFloat3(prevPos);
+    ResultField[int3(p)] = val;
+}
+
+[numthreads(8,8,8)]
+void AdvectVector(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= dims.x || id.y >= dims.y || id.z >= dims.z) return;
+
+    int3 p = int3(id.x, id.y, id.z);
+    float3 vel = ReadVelocity(p);
+    float3 prevPos = (float3)p - vel * (dt / dx);
+
+    float4 val = SampleFieldVec3(prevPos);
+    ResultVec[int3(p)] = val;
+}

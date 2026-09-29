@@ -1,0 +1,77 @@
+// Vorticity.compute — Fluid Preset Studio, upgrade #2
+//
+// Vorticity confinement (Fedkiw): a force that counteracts the numerical
+// dissipation of small-scale rotational detail.
+//
+//   omega = curl(u)
+//   eta   = grad(|omega|),  N = eta / |eta|
+//   F     = epsilon * dx * (N x omega)
+//   u_new = u + dt * F
+//
+// Central differences with clamped indices (same boundary style as
+// computedivergence.compute). CPU-validated 2026-09-27:
+//   epsilon=0.15 — sustainable: div/KE flat over 600 steps (recommended default)
+//   epsilon=0.3  — richer detail but slow energy accumulation (short bakes only)
+//   epsilon=1.0  — pumps too much energy for 50 Jacobi iterations (unstable)
+// Reference: cpu-baseline/simulate.py.
+//
+// NOT run in Unity Editor yet.
+#pragma kernel VorticityConfinement
+
+Texture3D<float4> Velocity; // input velocity (xyz)
+RWTexture3D<float4> Result;  // velocity + confinement force (out)
+
+int3 dims;
+float dx;
+float dt;
+float epsilon;
+
+float3 CurlAt(int x, int y, int z)
+{
+    int xm = max(x-1,0), xp = min(x+1,dims.x-1);
+    int ym = max(y-1,0), yp = min(y+1,dims.y-1);
+    int zm = max(z-1,0), zp = min(z+1,dims.z-1);
+
+    float3 vxm = Velocity.Load(int4(xm,y,z,0)).xyz;
+    float3 vxp = Velocity.Load(int4(xp,y,z,0)).xyz;
+    float3 vym = Velocity.Load(int4(x,ym,z,0)).xyz;
+    float3 vyp = Velocity.Load(int4(x,yp,z,0)).xyz;
+    float3 vzm = Velocity.Load(int4(x,y,zm,0)).xyz;
+    float3 vzp = Velocity.Load(int4(x,y,zp,0)).xyz;
+
+    // omega = curl(u), central differences
+    float3 om;
+    om.x = ((vyp.z - vym.z) - (vzp.y - vzm.y)) / (2.0 * dx);  // dw/dy - dv/dz
+    om.y = ((vzp.x - vzm.x) - (vxp.z - vxm.z)) / (2.0 * dx);  // du/dz - dw/dx
+    om.z = ((vxp.y - vxm.y) - (vyp.x - vym.x)) / (2.0 * dx);  // dv/dx - du/dy
+    return om;
+}
+
+float VortMagAt(int x, int y, int z)
+{
+    return length(CurlAt(x, y, z));
+}
+
+[numthreads(8,8,8)]
+void VorticityConfinement(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= dims.x || id.y >= dims.y || id.z >= dims.z) return;
+    int x = id.x, y = id.y, z = id.z;
+
+    float3 om = CurlAt(x, y, z);
+
+    // eta = grad(|omega|), clamped central differences
+    float mL = VortMagAt(max(x-1,0), y, z);
+    float mR = VortMagAt(min(x+1,dims.x-1), y, z);
+    float mD = VortMagAt(x, max(y-1,0), z);
+    float mU = VortMagAt(x, min(y+1,dims.y-1), z);
+    float mB = VortMagAt(x, y, max(z-1,0));
+    float mF = VortMagAt(x, y, min(z+1,dims.z-1));
+    float3 eta = float3((mR - mL), (mU - mD), (mF - mB)) / (2.0 * dx);
+
+    float3 N = eta / (length(eta) + 1e-8);
+    float3 F = epsilon * dx * cross(N, om);
+
+    float4 vel = Velocity.Load(int4(x, y, z, 0));
+    Result[int3(x,y,z)] = float4(vel.xyz + dt * F, vel.w);
+}

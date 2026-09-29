@@ -1,0 +1,45 @@
+name: unity-smoke
+
+# Unity smoke on free CPU runners (no GPU): verifies that
+#  1. unity-package/ and unity-project/Assets/Fluid are in sync,
+#  2. the project opens in the Editor, all C# compiles,
+#  3. all compute shaders compile at import and every kernel
+#     the driver looks up resolves (EditMode test, no dispatch).
+# Full compute verification (FluidVerify harness) runs on a GPU machine.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'unity-package/**'
+      - 'unity-project/**'
+      - '.github/workflows/unity-smoke.yml'
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Package/project sync check
+        run: |
+          diff -r unity-package/Scripts unity-project/Assets/Fluid/Scripts
+          diff -r unity-package/Shaders unity-project/Assets/Fluid/Shaders
+
+      - name: License note
+        if: ${{ secrets.UNITY_LICENSE == '' }}
+        run: |
+          echo "UNITY_LICENSE secret is not set — skipping the Editor run."
+          echo "Add it in Settings > Secrets and variables > Actions, then re-run."
+
+      - uses: game-ci/unity-test-runner@v4
+        if: ${{ secrets.UNITY_LICENSE != '' }}
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          projectPath: unity-project
+          unityVersion: 2022.3.62f2
+          testMode: editmode
+          checkName: unity-smoke
+          githubToken: ${{ secrets.GITHUB_TOKEN }}

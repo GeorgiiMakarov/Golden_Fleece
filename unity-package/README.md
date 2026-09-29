@@ -83,3 +83,10 @@ to capture frames; pack the PNG sequence into an atlas offline
 3. buoyancy + temperature field → 4. dynamic chi →
 5. Red-Black Gauss-Seidel / multigrid replacing Jacobi → 6. resolution 128–256.
 Each upgrade is A/B-compared against the baseline flipbook before merging.
+
+## CI mirror
+
+`../unity-project/Assets/Fluid` is a copy of this package's `Scripts/` and
+`Shaders/` inside a minimal Unity project (2022.3 LTS) so GameCI can run the
+EditMode kernel smoke test. The `unity-smoke` workflow fails on any drift
+between the two — edit here, then sync the copy.

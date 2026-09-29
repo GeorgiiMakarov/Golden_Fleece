@@ -74,5 +74,10 @@ CLI args: `simulate.py [sl|mc] [vort_eps] [buoy_beta] [steps] [solver] [iters] [
 ## CI
 
 `cpu-bake` runs on every push (GitHub free runners): the canonical 240-step
-bake plus the advection unit check. Unity/GPU verification runs on local
-hardware, not in CI (no GPU on free runners).
+bake plus the advection unit check. `unity-smoke` runs when Unity files
+change: checks that `unity-package/` and `unity-project/Assets/Fluid` are in
+sync, then (once the `UNITY_LICENSE` secret is set) opens the project in the
+Editor on a CPU runner — C# must compile, compute shaders must import, and
+every kernel the driver looks up must resolve (EditMode test, no dispatch).
+Unity/GPU verification runs on local hardware, not in CI (no GPU on free
+runners).
