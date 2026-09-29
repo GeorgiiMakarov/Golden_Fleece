@@ -1,0 +1,68 @@
+// Diffusion.compute
+#pragma kernel DiffuseScalar
+#pragma kernel DiffuseVector
+
+Texture3D<float> Field;         // scalar in
+RWTexture3D<float> ResultField; // scalar out
+
+Texture3D<float4> FieldVec;         // vector in
+RWTexture3D<float4> ResultVec;      // vector out
+
+int3 dims;
+float nu; // diffusivity
+float dt;
+float dx;
+
+[numthreads(8,8,8)]
+void DiffuseScalar(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= dims.x || id.y >= dims.y || id.z >= dims.z) return;
+    int x = id.x, y = id.y, z = id.z;
+
+    if (x==0 || y==0 || z==0 || x==dims.x-1 || y==dims.y-1 || z==dims.z-1)
+    {
+        float v = Field.Load(int4(x,y,z,0));
+        ResultField[int3(x,y,z)] = v;
+        return;
+    }
+
+    float c = Field.Load(int4(x,y,z,0));
+    float xp = Field.Load(int4(x+1,y,z,0));
+    float xm = Field.Load(int4(x-1,y,z,0));
+    float yp = Field.Load(int4(x,y+1,z,0));
+    float ym = Field.Load(int4(x,y-1,z,0));
+    float zp = Field.Load(int4(x,y,z+1,0));
+    float zm = Field.Load(int4(x,y,z-1,0));
+
+    float lap = xp + xm + yp + ym + zp + zm - 6.0 * c;
+    float coeff = nu * dt / (dx * dx);
+    float outv = c + coeff * lap;
+    ResultField[int3(x,y,z)] = outv;
+}
+
+[numthreads(8,8,8)]
+void DiffuseVector(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= dims.x || id.y >= dims.y || id.z >= dims.z) return;
+    int x = id.x, y = id.y, z = id.z;
+
+    if (x==0 || y==0 || z==0 || x==dims.x-1 || y==dims.y-1 || z==dims.z-1)
+    {
+        float4 v = FieldVec.Load(int4(x,y,z,0));
+        ResultVec[int3(x,y,z)] = v;
+        return;
+    }
+
+    float4 c = FieldVec.Load(int4(x,y,z,0));
+    float4 xp = FieldVec.Load(int4(x+1,y,z,0));
+    float4 xm = FieldVec.Load(int4(x-1,y,z,0));
+    float4 yp = FieldVec.Load(int4(x,y+1,z,0));
+    float4 ym = FieldVec.Load(int4(x,y-1,z,0));
+    float4 zp = FieldVec.Load(int4(x,y,z+1,0));
+    float4 zm = FieldVec.Load(int4(x,y,z-1,0));
+
+    float4 lap = xp + xm + yp + ym + zp + zm - 6.0 * c;
+    float coeff = nu * dt / (dx * dx);
+    float4 outv = c + coeff * lap;
+    ResultVec[int3(x,y,z)] = outv;
+}

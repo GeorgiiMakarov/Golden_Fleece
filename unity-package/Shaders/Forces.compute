@@ -1,0 +1,60 @@
+// Forces.compute — optional module, NOT in the baseline loop (v0.1).
+// Ported faithfully from the original prototype.
+//
+// KNOWN ORIGINAL BUG (flagged, not fixed):
+//   `linearForce` is computed but never applied — only `u += vortexForce;`
+//   executes. As shipped, SetForceAtPosition() has no visible effect.
+//   Fix (upgrade stage): apply both, e.g. `u += linearForce + vortexForce;`
+
+#pragma kernel ApplyForces
+
+RWTexture3D<float4> Result;
+Texture3D<float4> Velocity;
+
+struct ForceGPU {
+    float3 position; float _pad0;
+    float3 force;    float _pad1;
+    float3 vortexAxis; float _pad2;
+};
+
+StructuredBuffer<ForceGPU> Forces;
+
+int3 dims;
+float dt;
+float forceRadius;
+int forceCount;
+
+[numthreads(8,8,8)]
+void ApplyForces(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= dims.x || id.y >= dims.y || id.z >= dims.z) return;
+    int3 p = int3(id.xyz);
+    float4 vel = Velocity.Load(int4(p,0));
+    float3 u = vel.xyz;
+    float r = max(0.5, forceRadius);
+    float r2 = r * r;
+    float3 cell = (float3)p;
+
+    [loop]
+    for (int i=0; i<forceCount; i++)
+    {
+        ForceGPU fc = Forces[i];
+        float3 fpos = clamp(fc.position, 0.0, 1.0) * (float3(dims) - 1.0);
+        float3 d = cell - fpos;
+        float d2 = dot(d, d);
+
+        // Gaussian influence kernel
+        float w = exp(-d2 / (2.0 * r2));
+
+        // Linear force (NOTE: computed but NOT applied in the original — see header)
+        float3 linearForce = dt * fc.force * w;
+
+        // Vortex force (perpendicular to axis and d)
+        float3 vortexForce = dt * cross(fc.vortexAxis, d) * w;
+
+        // Apply vortex force only here, but you can mix them:
+        u += vortexForce;
+    }
+
+    Result[p] = float4(u, vel.w);
+}

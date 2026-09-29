@@ -1,0 +1,27 @@
+// Penalization.compute
+#pragma kernel Penalize
+
+Texture3D<float4> Velocity;    // input velocity
+Texture3D<float>  Chi;         // mask (0..1)
+RWTexture3D<float4> Result;    // output velocity
+
+int3 dims;
+float lambda_pen;
+float dt;
+
+[numthreads(8,8,8)]
+void Penalize(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= dims.x || id.y >= dims.y || id.z >= dims.z) return;
+    int x = id.x, y = id.y, z = id.z;
+
+    float4 vel = Velocity.Load(int4(x,y,z,0));
+    float chi = Chi.Load(int4(x,y,z,0));
+
+    float3 u_wall = float3(0,0,0); // can be made into a texture if needed
+
+    float3 pen = -lambda_pen * chi * (vel.xyz - u_wall);
+    float3 u_new = vel.xyz + dt * pen;
+
+    Result[int3(x,y,z)] = float4(u_new, vel.w);
+}

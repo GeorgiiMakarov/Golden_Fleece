@@ -1,0 +1,37 @@
+name: cpu-bake
+
+# Free-tier CI: the numpy CPU reference is the ground truth everything else
+# (GPU compute shaders, Unity Editor runs) is verified against.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  canonical-bake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: pip install numpy scipy matplotlib pillow
+      - name: Canonical SL bake (240 steps, 32^3, jacobi-50)
+        run: cd cpu-baseline && python3 simulate.py sl 0 0 240 jacobi 50 static
+      - name: Verify against frozen reference metrics
+        run: cd cpu-baseline && python3 verify_reference.py
+
+  advection-unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: pip install numpy scipy matplotlib pillow
+      - name: MacCormack vs semi-Lagrangian rotation check
+        run: cd cpu-baseline && python3 test_advection.py
