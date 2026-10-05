@@ -1,0 +1,42 @@
+name: ScriptCheckup
+
+on:
+  push:
+    paths:
+      - 'scriptcheckup/**'
+      - '.github/workflows/scriptcheckup.yml'
+  pull_request:
+    paths:
+      - 'scriptcheckup/**'
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          # NB: .NET 8 reaches end-of-life 2026-11-10. Move to 9.0.x / 10.0.x then.
+          dotnet-version: '8.0.x'
+
+      - name: Build ScriptCheckup
+        run: dotnet build scriptcheckup/ScriptCheckup.sln -c Release
+
+      - name: Run unit tests
+        run: dotnet test scriptcheckup/ScriptCheckup.Tests/ScriptCheckup.Tests.csproj -c Release
+
+      - name: Analyze Unity scripts (informational)
+        continue-on-error: true
+        run: |
+          TOOL=./scriptcheckup/ScriptCheckup.Cli/bin/Release/net8.0/ScriptCheckup.Cli.dll
+          dotnet "$TOOL" --dir unity-package --recursive --sarif scriptcheckup-unity-package.sarif --disable UL008 || \
+          dotnet "$TOOL" --dir unity-project/Assets --recursive --sarif scriptcheckup-unity-project.sarif --disable UL008 || true
+
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: scriptcheckup-unity-package.sarif
+          category: scriptcheckup

@@ -1,0 +1,1907 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ScriptCheckup — разбор Unity-скриптов без Unity Editor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tektur:wght@500;700;900&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#141519; --bg2:#181a1f;
+  --panel:#1f2228; --panel2:#24282f; --panel3:#2a2f37;
+  --line:#333945; --line2:#414857;
+  --text:#e8ebf0; --mut:#98a0ad; --dim:#68707e;
+  --blue:#5aa2e8; --blue2:#3d7ec2; --sel:#2b4a6b;
+  --red:#f26d6d; --red2:#e5534b;
+  --amber:#f2c14e;
+  --green:#7cc98f;
+  --mono:'JetBrains Mono',monospace;
+  --disp:'Tektur',sans-serif;
+  --body:'IBM Plex Sans',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:var(--body); font-size:15px; line-height:1.6;
+  min-height:100vh; overflow-x:hidden;
+}
+body.paused *,body.paused *::before,body.paused *::after{animation-play-state:paused!important}
+
+/* ---------- ambient layers ---------- */
+.amb{position:fixed;inset:0;z-index:-2;pointer-events:none;
+  background:
+    radial-gradient(900px 500px at 12% -6%, rgba(61,126,194,.16), transparent 60%),
+    radial-gradient(700px 500px at 96% 14%, rgba(242,193,78,.06), transparent 55%),
+    radial-gradient(800px 600px at 50% 115%, rgba(90,162,232,.08), transparent 60%),
+    var(--bg);
+}
+.grid{position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(122,140,170,.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(122,140,170,.055) 1px, transparent 1px);
+  background-size:44px 44px;
+  mask-image:linear-gradient(to bottom, #000 0%, rgba(0,0,0,.5) 40%, transparent 85%);
+  -webkit-mask-image:linear-gradient(to bottom, #000 0%, rgba(0,0,0,.5) 40%, transparent 85%);
+}
+.scan{position:fixed;left:0;right:0;top:-120px;height:120px;z-index:-1;pointer-events:none;
+  background:linear-gradient(to bottom, transparent, rgba(90,162,232,.05), transparent);
+  animation:scan 11s linear infinite;
+}
+@keyframes scan{to{transform:translateY(calc(100vh + 240px))}}
+
+/* ---------- top strip ---------- */
+.strip{max-width:1460px;margin:0 auto;padding:26px 28px 14px;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.strip .tag{font-family:var(--mono);font-size:11px;letter-spacing:.22em;color:var(--blue);text-transform:uppercase;display:flex;align-items:center;gap:10px}
+.strip .tag::before{content:'';width:26px;height:1px;background:var(--blue);display:inline-block}
+.strip h1{font-family:var(--disp);font-weight:900;font-size:clamp(26px,3.6vw,46px);line-height:1.02;letter-spacing:.01em;margin-top:8px;text-transform:uppercase}
+.strip h1 em{font-style:normal;color:var(--amber)}
+.strip p{color:var(--mut);max-width:420px;font-size:14px;padding-bottom:6px}
+.strip p b{color:var(--text);font-weight:600}
+
+/* ---------- editor window ---------- */
+.win{max-width:1460px;margin:14px auto 0;padding:0 28px}
+.win-frame{border:1px solid var(--line2);background:var(--panel);
+  box-shadow:0 30px 80px rgba(0,0,0,.55), 0 2px 0 rgba(255,255,255,.03) inset;
+  display:flex;flex-direction:column;height:min(82vh,780px);min-height:640px;position:relative}
+.titlebar{display:flex;align-items:center;gap:14px;padding:9px 14px;background:var(--panel2);border-bottom:1px solid var(--line)}
+.dots{display:flex;gap:7px}
+.dots i{width:11px;height:11px;border-radius:50%;display:block}
+.dots i:nth-child(1){background:#e5534b}.dots i:nth-child(2){background:#f2c14e}.dots i:nth-child(3){background:#7cc98f}
+.titlebar .ttl{font-family:var(--mono);font-size:11.5px;color:var(--mut);flex:1;text-align:center;letter-spacing:.04em}
+.titlebar .ver{font-family:var(--mono);font-size:10.5px;color:var(--dim);border:1px solid var(--line);padding:2px 8px;border-radius:3px}
+
+.menubar{display:flex;gap:2px;padding:3px 10px;background:var(--panel2);border-bottom:1px solid var(--line);font-family:var(--mono);font-size:12px;color:var(--mut)}
+.menubar span{padding:4px 10px;border-radius:3px;cursor:default;transition:background .15s,color .15s}
+.menubar span:hover{background:var(--sel);color:#fff}
+
+.toolbar{display:flex;align-items:center;gap:12px;padding:6px 12px;background:var(--panel3);border-bottom:1px solid var(--line);transition:background .4s,border-color .4s}
+.toolbar .left,.toolbar .right{flex:1;display:flex;align-items:center;gap:8px}
+.toolbar .right{justify-content:flex-end;font-family:var(--mono);font-size:11px;color:var(--dim)}
+.playgroup{display:flex;border:1px solid var(--line2);border-radius:4px;overflow:hidden}
+.playgroup button{width:44px;height:28px;background:var(--panel);border:none;color:var(--mut);cursor:pointer;display:grid;place-items:center;transition:background .15s,color .15s;border-right:1px solid var(--line)}
+.playgroup button:last-child{border-right:none}
+.playgroup button:hover{background:var(--panel3);color:var(--text)}
+.playgroup button svg{width:12px;height:12px;fill:currentColor}
+.toolbar.playing{background:linear-gradient(180deg,#2e4157,#2a3a4e);border-bottom-color:#3d5a7a}
+.toolbar.playing .playgroup{border-color:#4a6a8e}
+.toolbar.playing .playgroup button{background:#31465e;color:#cfe2f5;border-color:#3d5a7a}
+.playstate{display:none;align-items:center;gap:7px;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:#9fc6ee;text-transform:uppercase}
+.toolbar.playing .playstate{display:flex}
+.playstate i{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35;transform:scale(.75)}}
+.chip{font-family:var(--mono);font-size:10.5px;color:var(--dim);border:1px solid var(--line);padding:2px 8px;border-radius:3px}
+
+.main{flex:1;display:grid;grid-template-columns:212px 1fr 268px;grid-template-rows:1fr 226px;min-height:0}
+.pane-h{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:var(--panel2);border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+.pane-h .sub{letter-spacing:0;text-transform:none;color:var(--dim);font-size:10.5px}
+
+/* project panel */
+.project{grid-row:1/3;border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;background:var(--panel)}
+.plist{flex:1;overflow-y:auto;padding:8px 6px}
+.pitem{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:4px;cursor:pointer;transition:background .15s;border:1px solid transparent;position:relative}
+.pitem:hover{background:var(--panel3)}
+.pitem.active{background:var(--sel);border-color:#3d5a7a}
+.pitem .fic{width:26px;height:26px;flex:none;border-radius:4px;background:var(--panel3);border:1px solid var(--line2);display:grid;place-items:center;font-family:var(--mono);font-size:9px;font-weight:700;color:var(--blue)}
+.pitem.active .fic{background:#24425f}
+.pitem .fn{font-family:var(--mono);font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.pitem .fb{font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:8px;min-width:20px;text-align:center}
+.fb.e{background:rgba(229,83,75,.18);color:var(--red)}
+.fb.ok{background:rgba(124,201,143,.15);color:var(--green)}
+.pbtns{padding:10px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:7px}
+.pbtns button{font-family:var(--mono);font-size:11px;padding:8px 10px;background:var(--panel3);border:1px solid var(--line2);color:var(--text);cursor:pointer;border-radius:4px;transition:all .15s;text-align:left}
+.pbtns button:hover{border-color:var(--blue2);background:var(--sel);transform:translateX(3px)}
+.project.dragover .plist{outline:2px dashed var(--blue2);outline-offset:-8px;background:rgba(61,126,194,.07)}
+
+/* editor pane */
+.editorpane{display:flex;flex-direction:column;min-width:0;min-height:0;border-bottom:1px solid var(--line)}
+.etabs{display:flex;align-items:center;gap:10px;padding:0 10px;background:var(--panel2);border-bottom:1px solid var(--line);height:38px;flex:none}
+.etab{font-family:var(--mono);font-size:12px;color:var(--text);padding:9px 14px 8px;border-top:2px solid var(--blue);background:var(--panel);align-self:stretch;display:flex;align-items:center;gap:8px}
+.etab i{width:7px;height:7px;border-radius:50%;background:var(--amber);display:none}
+.etab.dirty i{display:block;animation:pulse 1.6s infinite}
+.hint{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--dim)}
+.hint kbd{border:1px solid var(--line2);border-bottom-width:2px;border-radius:3px;padding:1px 5px;font-size:10px;color:var(--mut)}
+.btn-analyze{font-family:var(--disp);font-weight:700;font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;background:linear-gradient(180deg,#4a90d9,#3672b4);color:#fff;border:1px solid #5aa2e8;padding:7px 18px;border-radius:4px;cursor:pointer;transition:all .18s;box-shadow:0 3px 14px rgba(74,144,217,.35)}
+.btn-analyze:hover{filter:brightness(1.12);transform:translateY(-1px)}
+.btn-analyze:active{transform:translateY(1px)}
+.btn-analyze.zap{animation:zap .45s}
+@keyframes zap{30%{box-shadow:0 0 0 8px rgba(90,162,232,.25);filter:brightness(1.3)}}
+
+.edwrap{flex:1;display:flex;min-height:0;position:relative;background:#1a1d22}
+.edwrap .gutter{flex:none;width:52px;background:var(--panel);border-right:1px solid var(--line);overflow:hidden;font-family:var(--mono);font-size:12.5px;line-height:22px;color:var(--dim);padding-top:12px;user-select:none}
+.edwrap .gutter div{text-align:right;padding-right:12px;position:relative}
+.edwrap .gutter div.lw::after{content:'';position:absolute;right:3px;top:50%;width:5px;height:5px;border-radius:50%;transform:translateY(-50%)}
+.edwrap .gutter div.le::after{background:var(--red2)}
+.edwrap .gutter div.lwn::after{background:var(--amber)}
+.edwrap .gutter div.ll::after{background:#8b93a1}
+.codearea{flex:1;position:relative;min-width:0;overflow:hidden}
+.codearea pre{position:absolute;inset:0;margin:0;font-family:var(--mono);font-size:13px;line-height:22px;white-space:pre;pointer-events:none;overflow:hidden;padding:12px 16px 12px 0;color:#d7dce4;will-change:transform}
+.codearea pre .cl{min-width:100%;width:max-content;border-left:2px solid transparent;transition:background .2s}
+.codearea pre .cl.ce{background:rgba(229,83,75,.10);border-left-color:var(--red2)}
+.codearea pre .cl.cw{background:rgba(242,193,78,.09);border-left-color:var(--amber)}
+.codearea pre .cl.cl2{background:rgba(139,147,161,.08);border-left-color:#8b93a1}
+.codearea pre .cl.flash{animation:flash 1.1s ease-out}
+@keyframes flash{0%{background:rgba(90,162,232,.4)}100%{background:transparent}}
+.codearea textarea{position:absolute;inset:0;background:transparent;border:none;outline:none;resize:none;overflow:auto;white-space:pre;
+  font-family:var(--mono);font-size:13px;line-height:22px;color:transparent;caret-color:#fff;
+  padding:12px 16px;-webkit-text-fill-color:transparent;tab-size:4}
+.codearea textarea::selection{background:rgba(90,162,232,.35)}
+.tk-k{color:#c586c0}.tk-t{color:#4ec9b0}.tk-s{color:#ce9178}.tk-c{color:#6a9955;font-style:italic}.tk-n{color:#b5cea8}
+.edempty{position:absolute;inset:0;display:none;place-items:center;text-align:center;color:var(--dim);font-family:var(--mono);font-size:12.5px;padding:20px}
+
+/* inspector */
+.inspector{border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0;background:var(--panel);grid-row:1/2;overflow-y:auto}
+.insp-body{padding:14px 14px 20px;display:flex;flex-direction:column;gap:16px}
+.ifile{display:flex;gap:12px;align-items:center;padding:12px;background:var(--panel2);border:1px solid var(--line);border-radius:5px}
+.ifile .fic{width:40px;height:40px;flex:none;border-radius:6px;background:var(--sel);display:grid;place-items:center;font-family:var(--mono);font-weight:700;font-size:12px;color:#9fc6ee}
+.ifile .nm{font-family:var(--mono);font-size:12.5px;word-break:break-all}
+.ifile .tp{font-size:11px;color:var(--dim);font-family:var(--mono)}
+.meter{background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:12px}
+.meter .lbl{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin-bottom:8px}
+.meter .lbl b{color:var(--text)}
+.mtrack{height:8px;background:#171a1f;border-radius:4px;overflow:hidden;border:1px solid var(--line)}
+.mfill{height:100%;width:0%;border-radius:4px;transition:width .9s cubic-bezier(.2,.8,.2,1),background .4s;background:var(--green)}
+.mverdict{font-family:var(--disp);font-weight:700;font-size:15px;margin-top:9px;letter-spacing:.03em}
+.stats3{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.stat{background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:10px 8px;text-align:center;transition:transform .18s,border-color .18s}
+.stat:hover{transform:translateY(-2px);border-color:var(--line2)}
+.stat b{display:block;font-family:var(--disp);font-weight:900;font-size:24px;line-height:1}
+.stat span{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.stat.se b{color:var(--red)}.stat.sw b{color:var(--amber)}.stat.sl b{color:#a9b1bd}
+.toplist{display:flex;flex-direction:column;gap:6px}
+.toplist .ti{font-size:12.5px;color:var(--mut);padding:8px 10px;background:var(--panel2);border-left:3px solid var(--line2);border-radius:0 4px 4px 0;transition:transform .15s}
+.toplist .ti:hover{transform:translateX(4px)}
+.toplist .ti b{color:var(--text);font-weight:600}
+.legend{font-family:var(--mono);font-size:10.5px;color:var(--dim);display:flex;flex-direction:column;gap:5px}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:7px}
+
+/* console */
+.console{grid-column:2/4;display:flex;flex-direction:column;min-height:0;background:#1a1d22}
+.cbar{display:flex;align-items:center;gap:8px;padding:5px 10px;background:var(--panel2);border-bottom:1px solid var(--line);flex:none}
+.cbar .cb{font-family:var(--mono);font-size:11px;color:var(--mut);background:none;border:1px solid transparent;padding:4px 10px;border-radius:3px;cursor:pointer;display:flex;gap:7px;align-items:center;transition:all .15s}
+.cbar .cb:hover{background:var(--panel3);color:var(--text)}
+.cbar .cb.off{opacity:.35}
+.cbar .cb b{font-weight:700}
+.cbar .clear{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--dim);background:none;border:1px solid var(--line);padding:4px 12px;border-radius:3px;cursor:pointer;transition:all .15s}
+.cbar .clear:hover{color:var(--text);border-color:var(--line2)}
+.clist{flex:1;overflow-y:auto;font-family:var(--mono);font-size:12px}
+.crow{display:flex;gap:11px;padding:8px 14px;border-bottom:1px solid rgba(51,57,69,.5);cursor:pointer;align-items:flex-start;animation:rowin .32s both;transition:background .13s}
+.crow:hover{background:var(--panel3)}
+@keyframes rowin{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
+.crow svg{width:15px;height:15px;flex:none;margin-top:2px}
+.crow .msg{color:var(--text)}
+.crow.warning .msg{color:#f5d488}
+.crow.error .msg{color:#f5a3a0}
+.crow .ctx{display:block;color:var(--dim);font-size:10.5px;margin-top:2px}
+.crow .snip{display:block;color:var(--blue);font-size:11px;margin-top:3px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60ch}
+.crow .rid{margin-left:auto;flex:none;color:var(--dim);font-size:10px;border:1px solid var(--line);padding:1px 7px;border-radius:8px;margin-top:2px}
+.cempty{padding:34px;text-align:center;color:var(--dim);font-family:var(--mono);font-size:12px;line-height:2}
+.cempty b{color:var(--mut)}
+.cdiv{display:flex;align-items:center;gap:10px;padding:8px 14px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);background:rgba(51,57,69,.3)}
+.cdiv::before{content:'';width:14px;height:1px;background:var(--line)}
+.cdiv::after{content:'';flex:1;height:1px;background:var(--line)}
+.crow .expl{display:block;color:#9fc6ee;font-size:11.5px;margin-top:6px;padding:7px 10px;background:rgba(61,126,194,.09);border-left:2px solid var(--blue2);border-radius:0 3px 3px 0;max-width:80ch;white-space:pre-wrap}
+.crow .rid.u{border-color:#3d5a7a;color:#9fc6ee;background:rgba(61,126,194,.14)}
+
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(10,11,14,.74);backdrop-filter:blur(3px);display:none;place-items:center;z-index:60;padding:20px}
+.modal.on{display:grid;animation:fadein .2s}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+.mbox{width:min(780px,100%);background:var(--panel);border:1px solid var(--line2);box-shadow:0 40px 90px rgba(0,0,0,.65)}
+.mbox .mh{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--panel2);border-bottom:1px solid var(--line);font-family:var(--disp);font-weight:700;text-transform:uppercase;font-size:13px;letter-spacing:.04em}
+.mbox .mh button.x{margin-left:auto;cursor:pointer;color:var(--mut);font-family:var(--mono);font-size:11px;background:none;border:1px solid var(--line);padding:3px 11px;border-radius:3px;transition:all .15s}
+.mbox .mh button.x:hover{color:var(--text);border-color:var(--line2)}
+.mbox .mb{padding:16px;display:flex;flex-direction:column;gap:12px}
+.mbox textarea{width:100%;height:220px;background:#171a1f;border:1px solid var(--line);color:var(--text);font-family:var(--mono);font-size:12px;line-height:1.65;padding:12px;border-radius:4px;outline:none;resize:vertical}
+.mbox textarea:focus{border-color:var(--blue2)}
+.mbox .mhint{font-size:13px;color:var(--mut);line-height:1.6}
+.mbox .mhint b{color:var(--text);font-weight:600}
+.mrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.mrow .sp{flex:1}
+.mbtn{font-family:var(--disp);font-weight:700;text-transform:uppercase;font-size:12px;letter-spacing:.06em;padding:10px 20px;border-radius:4px;cursor:pointer;border:1px solid transparent;transition:all .15s}
+.mbtn.p{background:var(--blue);color:#10141a;border-color:#7fb6ea}
+.mbtn.p:hover{filter:brightness(1.12)}
+.mbtn.s{background:transparent;color:var(--mut);border-color:var(--line2)}
+.mbtn.s:hover{color:var(--text);border-color:#566073}
+.mbtn.f{background:var(--red2);color:#fff;border-color:#f58079}
+
+/* ---- category chips, fix cards, toast ---- */
+.cbar .cb.cat{opacity:.45}
+.cbar .cb.cat.on{opacity:1;background:rgba(61,126,194,.16);border-color:#3d5a7a;color:#cfe2f5}
+.catpills{display:flex;flex-direction:column;gap:6px}
+.catpill{font-family:var(--mono);font-size:10.5px;padding:7px 10px;border-radius:4px;border:1px solid var(--line2);color:var(--mut);background:var(--panel2)}
+.catpill.reinit{border-left:3px solid #b07cd9;color:#d7bff0}
+.catpill.rb{border-left:3px solid var(--blue);color:#bcd9f5}
+.crow[data-cat="reinit"]{box-shadow:inset 3px 0 0 rgba(176,124,217,.55)}
+.crow[data-cat="readback"]{box-shadow:inset 3px 0 0 rgba(90,162,232,.55)}
+.fixgrid{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:36px}
+.fixcard{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--line2);padding:24px;display:flex;flex-direction:column;gap:16px;transition:transform .25s,border-color .25s}
+.fixcard:hover{transform:translateY(-4px)}
+.fixcard.reinit{border-top-color:#b07cd9}
+.fixcard.rb{border-top-color:var(--blue)}
+.fixcard h3{font-family:var(--disp);font-weight:900;font-size:19px;text-transform:uppercase;line-height:1.2}
+.fixcard .sub2{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+.fixcard p{color:var(--mut);font-size:13.5px}
+.fixcard ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+.fixcard ul li{font-size:13px;color:var(--mut);padding-left:19px;position:relative;line-height:1.5}
+.fixcard ul li::before{content:'▸';position:absolute;left:0;color:var(--blue)}
+.fixcard.reinit ul li::before{color:#b07cd9}
+.fixcard ul li b{color:var(--text);font-weight:600}
+.fixcard pre{background:#171a1f;border:1px solid var(--line);border-radius:4px;padding:13px;overflow:auto;font-family:var(--mono);font-size:11.5px;line-height:1.65;max-height:340px;color:#d7dce4;white-space:pre;margin:0}
+.fclose{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:6px}
+.sbtn{font-family:var(--mono);font-size:11.5px;padding:9px 14px;border-radius:4px;border:1px solid var(--line2);background:transparent;color:var(--mut);cursor:pointer;transition:all .15s}
+.sbtn:hover{color:var(--text);border-color:#566073;background:var(--panel3)}
+.sbtn.pri{background:rgba(61,126,194,.18);border-color:#3d5a7a;color:#cfe2f5}
+.sbtn.pri:hover{background:rgba(61,126,194,.32)}
+.toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,90px);background:var(--panel3);border:1px solid var(--line2);color:var(--text);font-family:var(--mono);font-size:12px;padding:12px 22px;border-radius:4px;opacity:0;transition:all .3s;z-index:80;pointer-events:none;box-shadow:0 16px 40px rgba(0,0,0,.5)}
+.toast.on{transform:translate(-50%,0);opacity:1}
+.trow{display:flex;gap:10px;align-items:flex-start;padding:9px 12px;border-radius:4px;background:var(--panel2);border-left:3px solid var(--green);font-size:13px;color:var(--mut)}
+.trow.bad{border-left-color:var(--red2);color:#f5a3a0;background:rgba(229,83,75,.08)}
+.trow .ok{font-family:var(--disp);font-weight:900;color:var(--green);flex:none}
+.trow.bad .ok{color:var(--red2)}
+.trow b{color:var(--text);font-weight:600}
+.trow .d2{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--dim);flex:none;text-align:right}
+.tsum{font-family:var(--disp);font-weight:900;font-size:16px;color:var(--green);padding:12px;border:1px solid rgba(124,201,143,.4);background:rgba(124,201,143,.07);border-radius:4px}
+.tsum.bad{color:var(--red);border-color:rgba(229,83,75,.45);background:rgba(229,83,75,.08)}
+.tgroup{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-top:6px}
+@media(max-width:900px){.fixgrid{grid-template-columns:1fr}}
+
+/* status bar */
+.statusbar{display:flex;align-items:center;gap:18px;padding:5px 14px;background:var(--panel2);border-top:1px solid var(--line);font-family:var(--mono);font-size:10.5px;color:var(--dim);flex:none}
+.statusbar .dot{width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;margin-right:7px}
+.statusbar .sp{flex:1}
+
+/* ---------- below the editor ---------- */
+.below{max-width:1460px;margin:0 auto;padding:0 28px}
+.reveal{opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .7s cubic-bezier(.2,.8,.2,1)}
+.reveal.on{opacity:1;transform:none}
+
+.sec{padding:76px 0 10px}
+.sec .k{font-family:var(--mono);font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--blue);display:block;margin-bottom:14px}
+.sec h2{font-family:var(--disp);font-weight:900;font-size:clamp(24px,3vw,40px);line-height:1.08;text-transform:uppercase;letter-spacing:.01em}
+.why{display:grid;grid-template-columns:1.1fr .9fr;gap:56px;align-items:start}
+.why p{color:var(--mut);margin-top:18px;max-width:56ch}
+.why p b{color:var(--text);font-weight:600}
+.cantlist{border:1px solid var(--line);background:var(--panel);padding:26px 26px 10px;border-radius:6px;position:relative;overflow:hidden}
+.cantlist::before{content:'EDITOR ONLY';position:absolute;top:14px;right:-34px;transform:rotate(35deg);font-family:var(--mono);font-size:9px;letter-spacing:.3em;color:var(--red);background:rgba(229,83,75,.12);border:1px solid rgba(229,83,75,.35);padding:3px 40px}
+.cantlist li{list-style:none;display:flex;gap:14px;padding:13px 0;border-bottom:1px dashed var(--line);color:var(--mut);font-size:14px;transition:color .2s}
+.cantlist li:last-child{border-bottom:none}
+.cantlist li:hover{color:var(--text)}
+.cantlist .x{flex:none;font-family:var(--disp);font-weight:900;color:var(--red);font-size:15px;line-height:1.5}
+
+.caprow{display:grid;grid-template-columns:110px 1fr auto;gap:26px;align-items:baseline;padding:30px 10px;border-bottom:1px solid var(--line);transition:background .25s,padding-left .25s;cursor:default}
+.caprow:first-of-type{border-top:1px solid var(--line)}
+.caprow:hover{background:var(--panel);padding-left:26px}
+.caprow .n{font-family:var(--disp);font-weight:900;font-size:clamp(30px,3.4vw,52px);color:transparent;-webkit-text-stroke:1px var(--line2);transition:color .3s,-webkit-text-stroke-color .3s;line-height:1}
+.caprow:hover .n{color:var(--amber);-webkit-text-stroke-color:var(--amber)}
+.caprow h3{font-family:var(--disp);font-weight:700;font-size:clamp(17px,1.6vw,22px);text-transform:uppercase;letter-spacing:.02em}
+.caprow p{color:var(--mut);font-size:14px;margin-top:6px;max-width:64ch}
+.caprow .arr{font-family:var(--mono);color:var(--dim);font-size:20px;transition:transform .25s,color .25s}
+.caprow:hover .arr{transform:translateX(8px);color:var(--blue)}
+.caprow:nth-of-type(2){margin-left:5%}
+.caprow:nth-of-type(4){margin-left:5%}
+
+.check{display:grid;grid-template-columns:.9fr 1.1fr;gap:56px;align-items:start}
+.check .sticky{position:sticky;top:30px}
+.prog{margin-top:22px}
+.prog .pl{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-bottom:8px}
+.ptrack{height:10px;background:var(--panel);border:1px solid var(--line2);border-radius:5px;overflow:hidden}
+.pfill{height:100%;width:0%;background:linear-gradient(90deg,var(--blue2),var(--green));transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.plist2{display:flex;flex-direction:column;gap:10px}
+.pcheck{display:flex;gap:16px;align-items:flex-start;padding:16px 18px;background:var(--panel);border:1px solid var(--line);border-radius:5px;cursor:pointer;transition:all .2s;user-select:none}
+.pcheck:hover{border-color:var(--blue2);transform:translateX(5px)}
+.pcheck .box{flex:none;width:20px;height:20px;border:2px solid var(--line2);border-radius:4px;display:grid;place-items:center;transition:all .2s;margin-top:2px}
+.pcheck .box svg{width:12px;height:12px;stroke:#141519;stroke-width:3;fill:none;opacity:0;transform:scale(.4);transition:all .2s}
+.pcheck.done{border-color:rgba(124,201,143,.5);background:rgba(124,201,143,.06)}
+.pcheck.done .box{background:var(--green);border-color:var(--green)}
+.pcheck.done .box svg{opacity:1;transform:scale(1)}
+.pcheck .t{font-weight:600;font-size:15px;transition:color .2s}
+.pcheck.done .t{color:var(--dim);text-decoration:line-through}
+.pcheck .d{font-size:13px;color:var(--mut);margin-top:3px}
+.pcheck.done .d{color:var(--dim)}
+.pcheck .num{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--dim);flex:none}
+
+.cta{margin:70px 0 0;border:1px solid var(--line2);background:linear-gradient(120deg,var(--panel) 0%,#202733 100%);padding:44px 40px;display:flex;align-items:center;gap:30px;flex-wrap:wrap;position:relative;overflow:hidden}
+.cta::after{content:'';position:absolute;right:-60px;top:-60px;width:220px;height:220px;border:1px dashed var(--line2);border-radius:50%;animation:spin 40s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.cta .term{font-family:var(--mono);font-size:14px;color:var(--mut)}
+.cta .term .pr{color:var(--green)}
+.cta .term b{color:var(--text)}
+.cta h3{font-family:var(--disp);font-weight:900;font-size:clamp(20px,2.4vw,30px);text-transform:uppercase}
+.cta .go{margin-left:auto;font-family:var(--disp);font-weight:700;text-transform:uppercase;font-size:13px;letter-spacing:.08em;color:#141519;background:var(--amber);border:none;padding:14px 26px;border-radius:4px;cursor:pointer;transition:all .18s;z-index:1}
+.cta .go:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(242,193,78,.28)}
+
+footer{max-width:1460px;margin:60px auto 0;padding:22px 28px 34px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;color:var(--dim)}
+
+/* scrollbars */
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:var(--panel)}
+::-webkit-scrollbar-thumb{background:var(--line2);border-radius:5px;border:2px solid var(--panel)}
+::-webkit-scrollbar-thumb:hover{background:#566073}
+
+@media(max-width:1120px){
+  .main{grid-template-columns:170px 1fr;grid-template-rows:1fr 220px auto}
+  .inspector{grid-column:1/3;grid-row:3;border-left:none;border-top:1px solid var(--line);max-height:280px}
+  .console{grid-column:2/3}
+  .why,.check{grid-template-columns:1fr;gap:30px}
+  .check .sticky{position:static}
+  .caprow{grid-template-columns:70px 1fr;}
+  .caprow .arr{display:none}
+  .caprow:nth-of-type(2),.caprow:nth-of-type(4){margin-left:0}
+}
+@media(max-width:760px){
+  .main{grid-template-columns:1fr;grid-template-rows:auto 380px 220px auto}
+  .project{grid-row:auto;max-height:150px;border-right:none;border-bottom:1px solid var(--line)}
+  .console{grid-column:1}
+  .inspector{grid-column:1}
+  .strip,.win,.below{padding-left:16px;padding-right:16px}
+  .win-frame{height:auto;min-height:0}
+  .main{height:auto}
+  .edwrap{height:380px;flex:none}
+  .menubar span:nth-child(n+5){display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="amb"></div>
+<div class="grid"></div>
+<div class="scan"></div>
+
+<header class="strip">
+  <div>
+    <span class="tag">static analysis · C# · Unity patterns</span>
+    <h1>Скрипты под микроскопом,<br><em>без запуска движка</em></h1>
+  </div>
+  <p>Unity Editor сюда не помещается — поэтому вот его карманный аналог: <b>консоль, инспектор и статический анализ</b> ваших <b>.cs</b> файлов прямо в браузере.</p>
+</header>
+
+<div class="win">
+  <div class="win-frame">
+
+    <div class="titlebar">
+      <div class="dots"><i></i><i></i><i></i></div>
+      <div class="ttl" id="ttl">ScriptCheckup.unity — проверка без Editor</div>
+      <div class="ver">analyzer 1.4</div>
+    </div>
+
+    <div class="menubar">
+      <span>File</span><span>Edit</span><span>Assets</span><span>GameObject</span><span>Component</span><span>Window</span><span>Help</span>
+    </div>
+
+    <div class="toolbar" id="toolbar">
+      <div class="left">
+        <span class="chip">Layout: Default</span>
+        <span class="chip">2 × Script Checkup</span>
+      </div>
+      <div class="playgroup">
+        <button id="btnPlay" title="Play — запустить режим просмотра"><svg viewBox="0 0 12 12"><path d="M2 1l9 5-9 5z"/></svg></button>
+        <button id="btnPause" title="Pause — заморозить всё живое на странице"><svg viewBox="0 0 12 12"><path d="M2 1h3v10H2zM7 1h3v10H7z"/></svg></button>
+        <button id="btnStep" title="Step — один кадр вперёд"><svg viewBox="0 0 12 12"><path d="M1 1l7 5-7 5zM9 1h2v10H9z"/></svg></button>
+      </div>
+      <div class="playstate"><i></i>Play Mode</div>
+      <div class="right">
+        <span class="chip" id="layerChip">Layers ▾</span>
+        <span class="chip">Account: guest_dev</span>
+      </div>
+    </div>
+
+    <div class="main">
+
+      <aside class="project" id="project">
+        <div class="pane-h">Project <span class="sub">Assets/Scripts</span></div>
+        <div class="plist" id="plist"></div>
+        <div class="pbtns">
+          <button id="btnSample">+ Добавить сэмпл-скрипт</button>
+          <button id="btnOpen">⌕ Открыть .cs файл</button>
+          <input type="file" id="fileInput" accept=".cs,.txt" multiple hidden>
+        </div>
+      </aside>
+
+      <section class="editorpane">
+        <div class="etabs">
+          <div class="etab" id="etab"><i></i><span id="etabName">PlayerController.cs</span></div>
+          <span class="hint">анализ: <kbd>Ctrl</kbd>+<kbd>Enter</kbd> или кнопка</span>
+          <button class="btn-analyze" id="btnAnalyze">⚡ Analyze</button>
+        </div>
+        <div class="edwrap">
+          <div class="gutter" id="gutter"></div>
+          <div class="codearea">
+            <pre id="backdrop" aria-hidden="true"></pre>
+            <textarea id="codeInput" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <aside class="inspector">
+        <div class="pane-h">Inspector <span class="sub">script health</span></div>
+        <div class="insp-body" id="inspBody"></div>
+      </aside>
+
+      <section class="console">
+        <div class="cbar">
+          <button class="cb" data-sev="error" id="fErr"><b>0</b> Errors</button>
+          <button class="cb" data-sev="warning" id="fWarn"><b>0</b> Warnings</button>
+          <button class="cb" data-sev="log" id="fLog"><b>0</b> Logs</button>
+          <button class="cb cat on" data-cat="reinit" title="Показать/скрыть находки по reinit и Domain Reload">🔁 Reinit</button>
+          <button class="cb cat on" data-cat="readback" title="Показать/скрыть находки по readback GPU → CPU">📤 Readback</button>
+          <button class="cb" id="btnLog" style="border-color:var(--line);color:#9fc6ee">📥 Вставить лог Unity</button>
+          <button class="clear" id="btnClear">Clear</button>
+        </div>
+        <div class="clist" id="clist">
+          <div class="cempty">Консоль пуста.<br><b>Загрузите .cs</b> или добавьте сэмпл — затем жмите <b>⚡ Analyze</b>.</div>
+        </div>
+      </section>
+
+    </div>
+
+    <div class="statusbar">
+      <span><span class="dot"></span><span id="sbState">Analyzer ready</span></span>
+      <span class="sp"></span>
+      <button class="sbtn" id="btnSelf" style="padding:3px 11px;font-size:10.5px" title="Прогнать правила на демо-файлах и фиксах">🧪 Self-test</button>
+      <span id="sbFrame">F 000000</span>
+      <span id="sbCpu">CPU 0.00 ms</span>
+      <span>60 fps target</span>
+    </div>
+
+  </div>
+</div>
+
+<main class="below">
+
+  <section class="sec reveal">
+    <div class="why">
+      <div>
+        <span class="k">// честный ответ на вопрос</span>
+        <h2>Прогнать файлы<br>в Unity Editor — не могу</h2>
+        <p><b>Короткий ответ:</b> нет. У меня нет доступа к вашему компьютеру, к движку и к пайплайну Unity — ни открыть сцену, ни скомпилировать проект, ни войти в Play Mode я не могу. Это не вопрос желания, это отсутствие рук: Editor живёт у вас, я — в браузере.</p>
+        <p>Но есть три вещи, которые я делаю лучше, чем подсвечивание скобок: <b>разбираю ваши .cs построчно</b>, <b>перевожу лог из Editor</b> (CS-ошибки, NullReferenceException, стек-трейсы) на человеческий и <b>пишу недостающий код</b> — от контроллера персонажа до системы сохранений.</p>
+        <p>Что кидать: файлы <b>.cs</b>, текст ошибок из Console, <b>Editor.log</b>, скриншот инспектора или просто описание механики. Начните с кнопки <b>📥 Вставить лог Unity</b> в консоли выше.</p>
+      </div>
+      <ul class="cantlist">
+        <li><span class="x">✕</span>Открыть .unity-сцену и расставить объекты</li>
+        <li><span class="x">✕</span>Собрать проект и запустить Play Mode</li>
+        <li><span class="x">✕</span>Поймать рантайм-ошибки, физику, коллизии</li>
+        <li><span class="x">✕</span>Проверить рендер, шейдеры, анимации</li>
+        <li><span class="x">✕</span>Сделать билд под платформу</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="sec reveal">
+    <span class="k">// что я делаю вместо этого</span>
+    <h2 style="margin-bottom:34px">Скидывайте код — дальше моя очередь</h2>
+    <div class="caprow">
+      <span class="n">01</span>
+      <div><h3>Разбор скриптов построчно</h3><p>Вставьте содержимое .cs в чат или прямо в анализатор выше — получите список проблем с номерами строк, от несбалансированных скобок до GetComponent внутри Update.</p></div>
+      <span class="arr">→</span>
+    </div>
+    <div class="caprow">
+      <span class="n">02</span>
+      <div><h3>Перевод ошибок компилятора</h3><p>Скопируйте красные строки из Console (CS0103, CS0266, NullReferenceException…) — вставьте в <b>📥 Вставить лог Unity</b>: получу файл, строку, код ошибки и разбор по-русски. Плюс покажу исправленный вариант.</p></div>
+      <span class="arr">→</span>
+    </div>
+    <div class="caprow">
+      <span class="n">03</span>
+      <div><h3>Архитектура и рефакторинг</h3><p>Синглтоны, события, ScriptableObject, пулы объектов — подскажу, как разложить проект по полочкам, чтобы он не развалился к третьей фиче.</p></div>
+      <span class="arr">→</span>
+    </div>
+    <div class="caprow">
+      <span class="n">04</span>
+      <div><h3>Скрипты с нуля</h3><p>Опишите механику — напишу готовый MonoBehaviour: контроллер персонажа, инвентарь, спавнер врагов, диалоговую систему, сохранение в JSON.</p></div>
+      <span class="arr">→</span>
+    </div>
+    <div class="caprow">
+      <span class="n">05</span>
+      <div><h3>Reinit-баг и readback</h3><p>Две классики Unity: грязная статика, которая живёт после выхода из Play Mode (Domain Reload выключен), и синхронная вычитка GPU → CPU, которая роняет кадр. Обе ловятся анализатором — категории <b>🔁 Reinit</b> и <b>📤 Readback</b> в консоли.</p></div>
+      <span class="arr">→</span>
+    </div>
+  </section>
+
+  <section class="sec reveal">
+    <span class="k">// две боли, разложенные по полочкам</span>
+    <h2>Reinit-баг и readback:<br>что происходит и как лечить</h2>
+    <div class="fixgrid">
+
+      <article class="fixcard reinit">
+        <span class="sub2">case 01 · domain reload · dirty statics</span>
+        <h3>Reinit-баг</h3>
+        <p>В Project Settings → Editor → <b>Enter Play Mode Options</b> Unity может не перезагружать домен приложения. Тогда память процесса живёт между запусками: <b>статические поля сохраняют значения прошлой сессии</b>, синглтоны указывают на уничтоженные объекты, статические события держат подписки, счётчики ID продолжаются — и второй запуск ведёт себя иначе, чем первый.</p>
+        <ul>
+          <li><b>Симптом:</b> в первом запуске всё чисто, во втором события срабатывают дважды, спавн перезаписывает данные, появляются «двойные» синглтоны в DontDestroyOnLoad.</li>
+          <li><b>Симптом:</b> NullReferenceException на старте сцены — Instance уже «не null», но объект уничтожен.</li>
+          <li><b>Проверка:</b> выключите Domain Reload в Enter Play Mode Options и запустите сцену дважды. Разница в поведении = reinit-баг.</li>
+          <li><b>Быстрая разведка:</b> в консоли отключите Collapse, оставьте фильтр Warnings и посмотрите, что печатается ДО первого Start().</li>
+        </ul>
+        <pre id="codeReinit"></pre>
+        <div class="fclose">
+          <button class="sbtn pri" id="opReinit">↑ Открыть фикс в анализаторе</button>
+          <button class="sbtn" id="cpReinit">⧉ Скопировать</button>
+        </div>
+      </article>
+
+      <article class="fixcard rb">
+        <span class="sub2">case 02 · gpu → cpu · pipeline stall</span>
+        <h3>Readback</h3>
+        <p>Любая синхронная вычитка данных с GPU заставляет пайплайн ждать: CPU стоит на месте, пока GPU не отдаст копию, а GPU ждёт, пока CPU не разберёт очередь команд. Отсюда спайки на 10–40 мс при «безобидном» чтении пикселей или буфера.</p>
+        <ul>
+          <li><b>Виновники:</b> Texture2D.ReadPixels, ComputeBuffer/GraphicsBuffer.GetData, ScreenCapture.CaptureScreenshot, Camera.Render() с чтением, <b>AsyncGPUReadback.WaitAllRequests()</b>, чтение targetTexture в тот же кадр.</li>
+          <li><b>Симптом:</b> просадка ровно на кадре скриншота/замера цвета; в Profiler маркер <b>Wait on GPU</b> или <b>GPU.WaitForPresent</b>.</li>
+          <li><b>Правило:</b> читать через кадр-два и всегда асинхронно. Замеры яркости/цвета — по уменьшенной копии 16×16, а не по полному экрану.</li>
+          <li><b>Плюс:</b> AsyncGPUReadback отдаёт NativeArray без аллокаций в GC, а Apply(false, true) освобождает CPU-копию текстуры.</li>
+        </ul>
+        <pre id="codeRb"></pre>
+        <div class="fclose">
+          <button class="sbtn pri" id="opRb">↑ Открыть фикс в анализаторе</button>
+          <button class="sbtn" id="cpRb">⧉ Скопировать</button>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <section class="sec reveal">
+    <div class="check">
+      <div class="sticky">
+        <span class="k">// а вот это уже в настоящем Editor</span>
+        <h2>Чек-лист прогона<br>своими руками</h2>
+        <div class="prog">
+          <div class="pl"><span>прогресс прогона</span><b id="progNum">0 / 7</b></div>
+          <div class="ptrack"><div class="pfill" id="pfill"></div></div>
+        </div>
+      </div>
+      <div class="plist2" id="checklist">
+        <div class="pcheck"><span class="box"><svg viewBox="0 0 12 12"><path d="M1.5 6.5l3 3 6-7"/></svg></span><div><div class="t">Скопируйте .cs в Assets/Scripts</div><div class="d">Просто перетащите файлы в окно Project — Unity подхватит их автоматически.</div></div><span class="num">01</span></div>
+        <div class="pcheck"><span class="box"><svg viewBox="0 0 12 12"><path d="M1.5 6.5l3 3 6-7"/></svg></span><div><div class="t">Дождитесь компиляции</div><div class="d">Спиннер в правом нижнем углу Editor закончит крутиться — проект собран.</div></div><span class="num">02</span></div>
+        <div class="pcheck"><span class="box"><svg viewBox="0 0 12 12"><path d="M1.5 6.5l3 3 6-7"/></svg></span><div><div class="t">Откройте Window → General → Console</div><div class="d">Красные ошибки чините первыми: пока они есть, код не скомпилирован.</div></div><span class="num">03</span></div>
+        <div class="pcheck"><span class="box"><svg viewBox="0 0 12 12"><path d="M1.5 6.5l3 3 6-7"/></svg></span><div><div class="t">Разберите жёлтые warnings</div><div class="d">Не критично, но часто прячут будущие баги — и сюда можно скинуть их мне.</div></div><span class="num">04</span></div>
+        <div class="pcheck"><span class="box"><svg viewBox="0 0 12 12"><path d="M1.5 6.5l3 3 6-7"/></svg></span><div><div class="t">Повесьте скрипт на объект</div><div class="d">Add Component на GameObject; для полей без [SerializeField] не забудьте Inspector.</div></div><span class="num">05</span></div>
+        <div class="pcheck"><span class="box"><svg viewBox="0 0 12 12"><path d="M1.5 6.5l3 3 6-7"/></svg></span><div><div class="t">Жмите Play</div><div class="d">Проверьте поведение; изменения в Play Mode не сохраняются — не забудьте перенести.</div></div><span class="num">06</span></div>
+        <div class="pcheck"><span class="box"><svg viewBox="0 0 12 12"><path d="M1.5 6.5l3 3 6-7"/></svg></span><div><div class="t">Profiler, если тормозит</div><div class="d">Window → Analysis → Profiler: ищите пики CPU/GC — или кидайте горячие скрипты мне.</div></div><span class="num">07</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta reveal">
+    <div class="term"><span class="pr">guest@unity:~$</span> paste <b>PlayerController.cs</b> → chat</div>
+    <h3>Готов читать ваш код прямо сейчас</h3>
+    <button class="go" id="btnLogTop">📥 Разобрать лог Unity</button>
+  </section>
+
+</main>
+
+<div class="modal" id="selfModal">
+  <div class="mbox" style="width:min(880px,100%)">
+    <div class="mh">🧪 Self-test правил Reinit / Readback <button class="x" id="selfLx">esc ✕</button></div>
+    <div class="mb" id="selfBody" style="max-height:64vh;overflow-y:auto"></div>
+    <div class="mb" style="border-top:1px solid var(--line);padding-top:12px">
+      <div class="mhint">Тест гоняет анализатор по демо-файлам <b>GameSession.cs</b> и <b>PixelGrabber.cs</b>: проверяет, что нужные правила <b>срабатывают</b>, а после применения фиксов <b>ReinitSafeGameManager.cs</b> и <b>AsyncScreenGrabber.cs</b> — <b>замолкают</b>. Это и есть проверка «работает ли»: правила и фиксы сверяются друг с другом.</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="mbox">
+    <div class="mh">Разбор лога Unity Editor <button class="x" id="mLx">esc ✕</button></div>
+    <div class="mb">
+      <div class="mhint">Скопируйте вывод из <b>Window → General → Console</b> (или <b>Editor.log</b>) и вставьте сюда. Понимаю формат <b>CSxxxx</b> с файлом и строкой, а также рантайм-исключения со стек-трейсом — переведу, объясню и подсвечу строку в редакторе.</div>
+      <textarea id="mText" spellcheck="false" placeholder="Assets/Scripts/PlayerController.cs(34,17): error CS0103: The name 'healthh' does not exist in the current context
+
+NullReferenceException: Object reference not set to an instance of an object
+PlayerController.Update () (at Assets/Scripts/PlayerController.cs:22)
+Chest.Open () (at Assets/Scripts/Chest.cs:14)"></textarea>
+      <div class="mrow">
+        <button class="mbtn p" id="mLn">Разобрать лог</button>
+        <button class="mbtn s" id="mLd">Пример</button>
+        <button class="mbtn s" id="mLf">Выбрать .log / .txt файл</button>
+        <input type="file" id="mLinput" accept=".log,.txt,.cs,text/*" hidden>
+        <span class="sp"></span>
+        <button class="mbtn f" id="mLc">Очистить лог из консоли</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<footer>
+  <span>ScriptCheckup — эмулятор совести Unity-разработчика</span>
+  <span>правила: reinit · domain reload · readback · api-мисюз · рантайм ловит только Editor</span>
+</footer>
+
+<script>
+/* ============================================================
+   ScriptCheckup — статический анализ C#/Unity-скриптов
+   ============================================================ */
+
+const SAMPLES = [
+{
+name:'PlayerController.cs',
+code:`using System.Collections;
+using UnityEngine;
+
+public class PlayerController : MonoBehaviour
+{
+    public float speed = 6f;
+    public float jumpForce = 8f;
+    public int maxHealth = 100;
+    public AudioClip hitSound;
+
+    private int health;
+
+    void Start()
+    {
+        health = maxHealth;
+        StartCoroutine("RegenerateHealth");
+        GameManager.OnGameStarted += HandleGameStarted;
+    }
+
+    void Update()
+    {
+        Rigidbody rb = GetComponent<Rigidbody>();
+
+        float h = Input.GetAxis("Horizontal");
+        float v = Input.GetAxis("Vertical");
+
+        transform.Translate(new Vector3(h, 0, v) * speed);
+
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+        }
+
+        if (gameObject.tag == "Player")
+        {
+            Camera.main.transform.position = transform.position + new Vector3(0, 5, -8);
+        }
+
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            GameObject chest = GameObject.Find("Chest");
+            Debug.Log("Открыли сундук: " + chest.name);
+        }
+
+        if (health < 30)
+        {
+            Invoke("ShowHint", 1.5f);
+        }
+    }
+
+    void LateUpdate()
+    {
+    }
+
+    IEnumerator RegenerateHealth()
+    {
+        while (true)
+        {
+            yield return new WaitForSeconds(2f);
+            if (health < maxHealth)
+            {
+                health += 1;
+            }
+        }
+    }
+
+    void HandleGameStarted()
+    {
+        Debug.Log("Игра началась!");
+    }
+
+    void OnCollisionEnter(Collision collision)
+    {
+        if (collision.gameObject.tag == "Enemy")
+        {
+            health -= 10;
+            SendMessage("ApplyDamage", 10);
+        }
+    }
+}`
+},
+{
+name:'EnemySpawner.cs',
+code:`using UnityEngine;
+
+public class EnemySpawner : MonoBehaviour
+{
+    public GameObject enemyPrefab;
+    public int waveSize = 5;
+
+    void Update()
+    {
+        GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
+
+        if (enemies.Length == 0)
+        {
+            SpawnWave();
+        }
+    }
+
+    void SpawnWave()
+    {
+        for (int i = 0; i < waveSize; i++)
+        {
+            Vector3 pos = new Vector3(Random.Range(-10f, 10f), 0, Random.Range(-10f, 10f));
+            Instantiate(enemyPrefab, pos, Quaternion.identity);
+        }
+    }
+
+    void OnDrawGizmos()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, 12f);
+    }
+}`
+},
+{
+name:'UIManager.cs',
+code:`using UnityEngine;
+using UnityEngine.UI;
+
+public class UIManager : MonoBehaviour
+{
+    public static UIManager Instance;
+
+    public Text scoreText;
+    public Slider healthBar;
+
+    void Awake()
+    {
+        Instance = this;
+    }
+
+    void Update()
+    {
+        PlayerStats stats = FindObjectOfType<PlayerStats>();
+        scoreText.text = "Очки: " + stats.Score.ToString();
+    }
+
+    public async void LoadPanel()
+    {
+        await System.Threading.Tasks.Task.Delay(500);
+        Debug.Log("Панель загружена");
+    }
+}`
+},
+{
+name:'GameSession.cs',
+code:`using System.Collections.Generic;
+using UnityEngine;
+
+// Демо Reinit-бага: вся статика живёт между запусками Play Mode,
+// если в Project Settings отключён Domain Reload.
+public class GameSession : MonoBehaviour
+{
+    public static GameSession Instance;
+    public static event System.Action OnWaveCleared;
+    public static List<Enemy> AliveEnemies = new List<Enemy>();
+    public static int spawnedTotal;
+    public static int nextId = 1;
+
+    public GameObject enemyPrefab;
+
+    void Awake()
+    {
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+        OnWaveCleared += ShowVictory;
+    }
+
+    public Enemy Spawn()
+    {
+        spawnedTotal++;
+        GameObject go = Instantiate(enemyPrefab, Vector3.zero, Quaternion.identity);
+        Enemy e = go.GetComponent<Enemy>();
+        e.id = nextId++;
+        AliveEnemies.Add(e);
+        return e;
+    }
+
+    public void ClearWave()
+    {
+        AliveEnemies.Clear();
+        OnWaveCleared();
+    }
+
+    void ShowVictory()
+    {
+        Debug.Log("Волна зачищена, всего заспавнено: " + spawnedTotal);
+    }
+
+    void OnGUI()
+    {
+        GUI.Label(new Rect(10, 10, 300, 20), "Enemies: " + AliveEnemies.Count);
+        GUI.Label(new Rect(10, 30, 300, 20), "Spawned total: " + spawnedTotal);
+    }
+}`
+},
+{
+name:'PixelGrabber.cs',
+code:`using UnityEngine;
+using UnityEngine.Rendering;
+
+// Демо readback: каждое обращение к данным GPU происходит синхронно,
+// прямо в Update/LateUpdate — это гарантированный стоп пайплайна.
+public class PixelGrabber : MonoBehaviour
+{
+    public ComputeBuffer positions;
+    public Camera cam;
+    public RenderTexture rt;
+    public Texture2D readable;
+
+    void Update()
+    {
+        positions.GetData(new Vector3[1024]);
+
+        RenderTexture.active = rt;
+        readable.ReadPixels(new Rect(0, 0, 256, 256), 0, 0);
+        readable.Apply();
+
+        Vector3 average = MeasureBrightness(readable.GetPixels());
+        Debug.Log("Средняя яркость: " + average);
+    }
+
+    Vector3 MeasureBrightness(Color[] pixels)
+    {
+        float sum = 0f;
+        for (int i = 0; i < pixels.Length; i++)
+        {
+            sum += pixels[i].r;
+        }
+        return Vector3.one * (sum / pixels.Length);
+    }
+
+    void LateUpdate()
+    {
+        AsyncGPUReadback.Request(rt);
+        ScreenCapture.CaptureScreenshot("shot.png");
+    }
+}`
+}
+];
+
+/* ---------- icons ---------- */
+const ICO = {
+error:'<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="#e5534b"/><rect x="7.15" y="3.4" width="1.7" height="6.2" rx="0.85" fill="#fff"/><circle cx="8" cy="12.1" r="1.15" fill="#fff"/></svg>',
+warning:'<svg viewBox="0 0 16 16"><path d="M8 1.3L15.4 14H0.6L8 1.3z" fill="#f2c14e"/><rect x="7.15" y="5.6" width="1.7" height="4.6" rx="0.85" fill="#241d08"/><circle cx="8" cy="12" r="1.05" fill="#241d08"/></svg>',
+log:'<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="#8b93a1"/><circle cx="8" cy="4.4" r="1.1" fill="#1a1d22"/><rect x="7.15" y="6.6" width="1.7" height="5.6" rx="0.85" fill="#1a1d22"/></svg>'
+};
+
+/* ============================================================
+   Unity Editor log importer
+   ============================================================ */
+const CS_EXPLAIN = {
+'CS0103':'Имя не существует в текущем контексте: опечатка, забытый using или объявление не в той области видимости. Проверьте регистр букв.',
+'CS1002':'; expected — где-то на строке выше не закрыты скобки, кавычки или сам ; пропущен.',
+'CS1003':'Синтаксическая ошибка перед указанным токеном — почти всегда незакрытая скобка или кавычка строкой выше.',
+'CS0117':'\'X\' does not contain a definition — обращаетесь к полю/методу, которого нет у этого типа. Проверьте имя или тип переменной.',
+'CS0122':'Член недоступен из-за уровня защиты: private/protected. Сделайте его public или заведите метод-обёртку.',
+'CS0246':'Тип или namespace не найден: не хватает using, пакета или самого класса. Для Unity-типов — using UnityEngine;.',
+'CS0266':'Нельзя неявно преобразовать тип (например int → float без \'f\', или Component → GameObject через .gameObject).',
+'CS0029':'Нельзя присвоить значение одного типа переменной другого типа — нужен явный каст или другой тип поля.',
+'CS0618':'\'X\' устарел (obsolete) — используйте рекомендуемую замену из текста сообщения. В Unity 2023+ это часто устаревшие Input и FindObjectOfType.',
+'CS0649':'Поле никогда не назначается и всегда будет null/0. Unity ругается, когда нет ни настройки в Inspector, ни присваивания в коде.',
+'CS1503':'Несоответствие типов аргументов — проверьте сигнатуру метода, которую вызываете.',
+'CS7036':'Не хватает обязательного аргумента: у метода есть параметры, а вы вызываете пустым ().',
+'CS0234':'Типа нет в namespace: проверьте пакет (Input System, TextMeshPro, UI) и нужный using.',
+'CS1519':'Неверный токен в объявлении класса — лишняя/пропущенная скобка, скобка не в том месте или объявление внутри метода.',
+'CS1998':'async метод без await: выполняется синхронно. Либо добавьте await, либо уберите async.',
+'CS0501':'\'X\' must declare a body — абстрактный член или забытые { } у метода.',
+'CS0120':'К нестатическому члену обращаются из статического контекста: нужен экземпляр или сделайте член static.',
+'CS0136':'Переменная с таким именем уже объявлена в этой области — конфликт имён внутри метода.'
+};
+const EX_EXPLAIN = {
+'NullReferenceException':'Объект, к которому вы обращаетесь, равен null. Смотрите строку из стек-трейса: чаще всего это незаполненное поле в Inspector, Destroy-нутый объект или результат Find/GetComponent, который ничего не нашёл.',
+'MissingReferenceException':'Ссылка цела, а объект уже уничтожен через Destroy. Проверяйте if (obj != null) — в Unity такое сравнение учитывает уничтожение.',
+'UnassignedReferenceException':'Поле не назначено в Inspector: перетащите объект или ассет в слот, либо задайте значение кодом.',
+'IndexOutOfRangeException':'Индекс вышел за границы массива или List — проверяйте длину перед обращением.',
+'MissingComponentException':'На объекте нет нужного компонента: Add Component / AddComponent<T>() и проверка на null после GetComponent.',
+'ArgumentException':'Некорректные аргументы вызова — конкретика всегда в хвосте сообщения.',
+'InvalidOperationException':'Операция запрещена в текущем состоянии. Классика Unity — изменение коллекции прямо внутри foreach (Collection was modified).',
+'FormatException':'Строка не парсится в нужный тип: int.Parse без проверки, кривой текстовый ассет, битые данные сохранения.'
+};
+function baseName(p){ return String(p||'').split(/[\\/]/).pop(); }
+
+function parseUnityLog(text){
+  const out = [];
+  const seen = new Set();
+  const push = e=>{
+    const key = e.file+'|'+e.line+'|'+e.rid;
+    if(e.file && seen.has(key)) return;
+    if(e.file) seen.add(key);
+    out.push(e);
+  };
+  text.split('\n').forEach(rawLine=>{
+    const ln = rawLine.trim();
+    if(!ln) return;
+    // 1) compiler diagnostics: path(line,col): error CSxxxx: message
+    let m = ln.match(/^(.+?\.cs)\s*\((\d+)(?:\s*,\s*\d+)?\)\s*:\s*(?:(error|warning)\s+)?(CS\d+|BC\d+)?\s*:?\s*(.*)$/i);
+    if(m && (m[4] || m[3])){
+      const code = m[4] || 'CS?';
+      push({rid:code, sev:(m[3]==='warning'||/CS0649|CS1998|CS0618/.test(code))?'warning':'error',
+        file:baseName(m[1]), line:+m[2], msg:(m[5]||code).replace(/^\s*(error|warning)\s+/i,''),
+        explain:CS_EXPLAIN[code]||'', src:'unity'});
+      return;
+    }
+    // 2) runtime exception headers
+    m = ln.match(/^([A-Za-z_][\w.()<>]*(?:Exception|Error))\s*:\s*(.*)$/);
+    if(m && !/^(UnityEngine|UnityEditor|System\.[A-Z])/.test(ln)){
+      const typeName = m[1].split('.').pop();
+      push({rid: typeName.replace(/Exception$/,'Ex.'), sev:'error', file:'', line:0,
+        msg:m[2] || typeName, explain:EX_EXPLAIN[typeName]||'', src:'unity', open:true});
+      return;
+    }
+    // 3) stack frames: at Foo.Bar () (at Assets/Scripts/Foo.cs:14)
+    m = ln.match(/\.cs[:\s]*(\d+)/);
+    if(m){
+      const fn = ln.match(/([\w\\/. -]+\.cs)/);
+      if(fn){
+        const last = out[out.length-1];
+        if(last && !last.file){
+          last.file = baseName(fn[1]);
+          last.line = +m[1];
+        }
+      }
+    }
+  });
+  return out;
+}
+
+const SAMPLE_LOG =
+`Assets/Scripts/PlayerController.cs(34,17): error CS0103: The name 'healthh' does not exist in the current context
+Assets/Scripts/PlayerController.cs(9,12): warning CS0649: Field 'PlayerController.hitSound' is never assigned to, and will always have its default value null
+Assets/Scripts/UIManager.cs(21,9): warning CS1998: This async method lacks 'await' operators and will run synchronously
+
+NullReferenceException: Object reference not set to an instance of an object
+PlayerController.Update () (at Assets/Scripts/PlayerController.cs:22)
+UIManager.Refresh () (at Assets/Scripts/UIManager.cs:18)
+
+MissingComponentException: There is no 'Rigidbody' attached to the "Player" game object, but a script is trying to access it.
+PlayerController.Update () (at Assets/Scripts/PlayerController.cs:19)`;
+
+/* ---------- state ---------- */
+let files = [];
+let current = 0;
+let sampleIdx = 0;
+let unityEntries = [];
+let filters = new Set(['error','warning','log']);
+let catFilters = new Set(['reinit','readback']);
+
+const $ = id => document.getElementById(id);
+const ta = $('codeInput'), backdrop = $('backdrop'), gutter = $('gutter');
+const clist = $('clist'), plistEl = $('plist');
+
+/* ---------- utils ---------- */
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function lineAt(code, idx){ return code.slice(0, idx).split('\n').length; }
+function inRanges(ranges, idx){ return ranges.some(r => idx >= r.from && idx <= r.to); }
+
+/* lightweight syntax highlight (comment/string placeholders first) */
+function hlLine(raw){
+  let s = esc(raw);
+  const stash = [];
+  s = s.replace(/(\/\/.*$)|("(?:[^"\\]|\\.)*")/g, (m)=>{ stash.push(
+    m.startsWith('//') ? '<span class="tk-c">'+m+'</span>' : '<span class="tk-s">'+m+'</span>'); return '\u0001'+(stash.length-1)+'\u0001'; });
+  s = s.replace(/\b(public|private|protected|internal|void|class|new|if|else|for|foreach|while|return|using|namespace|static|override|virtual|bool|float|int|string|var|null|true|false|this|in|out|ref|yield|break|continue|switch|case|default|get|set|readonly|const|enum|struct|interface|abstract|sealed|partial|async|await|try|catch|finally|throw|is|as)\b/g,'<span class="tk-k">$1</span>');
+  s = s.replace(/\b(MonoBehaviour|GameObject|Transform|Vector2|Vector3|Vector4|Quaternion|Rigidbody|Rigidbody2D|Collider|Camera|Input|Time|Mathf|Debug|SerializeField|HideInInspector|Coroutine|IEnumerator|KeyCode|Animator|AudioSource|AudioClip|ParticleSystem|RaycastHit|Color|Color32|ScriptableObject|Destroy|Instantiate|Physics|Physics2D|Slider|Text|UIManager|Random|Gizmos|WaitForSeconds|ForceMode|Collision)\b/g,'<span class="tk-t">$1</span>');
+  s = s.replace(/\b(\d+\.?\d*f?)\b/g,'<span class="tk-n">$1</span>');
+  s = s.replace(/\u0001(\d+)\u0001/g,(m,i)=>stash[+i]);
+  return s;
+}
+
+/* ============================================================
+   ANALYZER
+   ============================================================ */
+function analyze(code){
+  const issues = [];
+  const add = (sev,rid,line,msg,snip,cat)=>issues.push({sev,rid,line,msg,snip:snip||'',cat:cat||''});
+  const lineOf = frag => { const i = code.indexOf(frag); return i<0 ? 1 : lineAt(code, i); };
+  const L1 = n => (code.split('\n')[n-1]||'').trim();
+  const scan = (re, body, base, cb)=>{ let m; re.lastIndex=0; while((m=re.exec(body))){ cb(m, base + body.slice(0,m.index).split('\n').length - 1); if(m.index===re.lastIndex)re.lastIndex++; } };
+
+  /* method blocks + ranges */
+  const methodRe = /\b(?:void|IEnumerator)\s+(Awake|Start|Update|FixedUpdate|LateUpdate|OnEnable|OnDisable|OnDestroy|OnGUI|OnCollisionEnter|OnTriggerEnter|OnApplicationQuit|OnApplicationPause|OnApplicationFocus|OnValidate|Reset)\s*\(\s*\)/g;
+  const ranges = [], blocks = {};
+  let m;
+  while((m = methodRe.exec(code))){
+    const open = code.indexOf('{', methodRe.lastIndex);
+    if(open === -1) break;
+    let depth = 0, i = open;
+    for(; i < code.length; i++){
+      if(code[i]==='{') depth++;
+      else if(code[i]==='}'){ depth--; if(depth===0) break; }
+    }
+    const name = m[1];
+    const from = open, to = i;
+    (blocks[name] = blocks[name] || []).push({from, to, body: code.slice(open+1, i)});
+    ranges.push({name, from, to});
+    if(name==='Update'||name==='LateUpdate'||name==='FixedUpdate')
+      ranges[ranges.length-1].isUpdate = (name==='Update' || name==='LateUpdate'); // «горячие» кадровые методы
+  }
+  const updRanges = ranges.filter(r=>r.isUpdate);
+  // «выходные» методы: ждать GPU здесь — норма, а не баг
+  const teardownRanges = ranges.filter(r=>/OnDisable|OnDestroy|OnApplicationQuit|OnApplicationPause/.test(r.name));
+  const lineOfBlockStart = r => lineAt(code, r.from);
+
+  /* --- whole-file checks --- */
+  // brace balance (skipping strings/line comments roughly)
+  let bal=0, inStr=false, inChr=false, lastUnbal=null;
+  for(let i=0;i<code.length;i++){
+    const c=code[i], p=code[i-1];
+    if(inStr){ if(c==='"'&&p!=='\\') inStr=false; continue; }
+    if(inChr){ if(c==="'"&&p!=='\\') inChr=false; continue; }
+    if(c==='"'){ inStr=true; continue; }
+    if(c==="'"){ inChr=true; continue; }
+    if(c==='/'&&code[i+1]==='/'){ while(i<code.length&&code[i]!=='\n')i++; continue; }
+    if(c==='{') bal++;
+    if(c==='}'){ bal--; if(bal<0&&lastUnbal===null) lastUnbal=i; }
+  }
+  if(bal!==0 || lastUnbal!==null){
+    add('error','UE-001', lastUnbal?lineAt(code,lastUnbal):code.split('\n').length,
+      bal>0?'Не хватает закрывающей фигурной скобки (лишних «{»: '+bal+')':'Фигурные скобки не сбалансированы — код не скомпилируется');
+  }
+
+  // missing using UnityEngine
+  if(/\b(MonoBehaviour|GameObject|Transform|Vector3|Vector2)\b/.test(code) && !/^using\s+UnityEngine\s*;/m.test(code))
+    add('error','UE-002',1,'Не хватает «using UnityEngine;» — типы движка не найдутся');
+
+  // Thread.Sleep
+  scan(/Thread\.Sleep\s*\(/g, code, 1, (mm,l)=>add('error','UE-003',l,'Thread.Sleep блокирует главный поток Unity — игра зависнет','> '+mm[0].trim()));
+
+  // FindObjectOfType anywhere
+  scan(/FindObjectsOfType\s*[<(]/g, code, 1, (mm,l)=>add('warning','UW-010',l,'FindObjectOfType перебирает все объекты сцены — кэшируйте результат в Awake/Start','> '+code.split('\n')[l-1].trim()));
+
+  // find-family: severity depends on Update
+  scan(/(GameObject\.Find\s*\(|FindGameObjectWithTag\s*\(|FindGameObjectsWithTag\s*\(|FindWithTag\s*\()/g, code, 1, (mm,l)=>{
+    const idx = code.indexOf(mm[0], mm.index);
+    if(inRanges(updRanges, mm.index)) add('warning','UW-002',l,mm[0].replace(/\s*\($/,'')+' вызывается в Update — поиск по всей сцене каждый кадр','> '+code.split('\n')[l-1].trim());
+    else add('log','UL-011',l,mm[0].replace(/\s*\($/,'')+' — лучше найти один раз и сохранить ссылку','> '+code.split('\n')[l-1].trim());
+  });
+
+  // tag ==
+  scan(/\.tag\s*==|==\s*[\w.]*\.tag\b/g, code, 1, (mm,l)=>add('warning','UW-006',l,'Сравнение .tag — используйте CompareTag("..."), это быстрее и безопаснее к опечаткам','> '+code.split('\n')[l-1].trim()));
+
+  // events += without -=
+  scan(/([A-Za-z_][\w.]*)\s*\+=\s*([A-Za-z_][\w.]*)\s*;/g, code, 1, (mm,l)=>{
+    const name = mm[1];
+    if(!new RegExp(name.replace(/\./g,'\\.')+'\\s*-=').test(code))
+      add('warning','UW-007',l,'Подписка на «'+name+'» без отписки — отпишитесь в OnDisable/OnDestroy, иначе утечка','> '+mm[0].trim());
+  });
+
+  // async void
+  scan(/\basync\s+void\s+(\w+)\s*\(/g, code, 1, (mm,l)=>add('warning','UW-008',l,'async void в «'+mm[1]+'» — исключения из такого метода убивают процесс; используйте async Task','> '+mm[0].trim()));
+
+  // public fields
+  let pubCount=0;
+  code.split('\n').forEach((ln,i)=>{
+    if(/^\s*public\s+(?!class|static|void|override|abstract|enum|struct|interface|event|const|readonly|partial|async)[A-Za-z_][\w<>\[\],. ]*\s+[A-Za-z_]\w*\s*(=|;)/.test(ln)){
+      pubCount++;
+      if(pubCount<=6) add('log','UL-001',i+1,'Публичное поле видно в Inspector, но ломает инкапсуляцию — [SerializeField] private предпочтительнее','> '+ln.trim());
+    }
+  });
+  if(pubCount>6) add('log','UL-001',1,'И ещё '+(pubCount-6)+' публичных полей — рассмотрите [SerializeField] private');
+
+  // Debug.Log
+  let logs=0; scan(/Debug\.Log\s*\(/g, code, 1, (mm,l)=>{ logs++; add('log','UL-002',l,'Отладочный Debug.Log — не забудьте убрать перед билдом','> '+code.split('\n')[l-1].trim()); });
+
+  // string coroutines
+  scan(/StartCoroutine\s*\(\s*"/g, code, 1, (mm,l)=>add('log','UL-003',l,'Корутина по имени строкой: опечатка не ловится компилятором, StopCoroutine затруднён'));
+
+  // Invoke with string
+  scan(/(InvokeRepeating|Invoke)\s*\(\s*"/g, code, 1, (mm,l)=>add('log','UL-004',l,mm[1]+' со строковым именем — рефакторинг сломает молча'));
+
+  // SendMessage
+  scan(/(SendMessage|BroadcastMessage)\s*\(/g, code, 1, (mm,l)=>add('log','UL-005',l,mm[1]+' медленный и нетипизированный — лучше событие или прямой вызов'));
+
+  // classes without MonoBehaviour
+  if(/\bclass\s+\w+/.test(code) && !/:\s*MonoBehaviour/.test(code) && !/static\s+class/.test(code))
+    add('log','UL-009', lineAt(code, code.search(/\bclass\s+\w+/)), 'Класс не наследует MonoBehaviour — скрипт нельзя повесить на GameObject');
+
+  /* --- per-Update checks --- */
+  updRanges.forEach(r=>{
+    const base = lineOfBlockStart(r);
+    const body = r.body;
+    const L = l => base + l;
+
+    scan(/GetComponent\s*</g, body, 0, (mm,l)=>add('warning','UW-001',L(l),'GetComponent в Update ищет компонент каждый кадр — кэшируйте в Awake/Start','> '+body.split('\n')[l].trim()));
+    scan(/Camera\.main/g, body, 0, (mm,l)=>add('warning','UW-003',L(l),'Camera.main внутри Update — каждый вызов ищет объект по тэгу; кэшируйте камеру','> '+body.split('\n')[l].trim()));
+    scan(/\b(AddForce|AddTorque|AddRelativeForce|MovePosition|MoveRotation)\s*\(|\.(velocity|angularVelocity)\s*=[^=]/g, body, 0, (mm,l)=>add('warning','UW-004',L(l),'Физика («'+(mm[1]||mm[2])+'») в Update — перенесите в FixedUpdate, иначе поведение нестабильно','> '+body.split('\n')[l].trim()));
+    scan(/transform\.(Translate\s*\(|position\s*\+=)/g, body, 0, (mm,l)=>{
+      if(!/Time\.deltaTime/.test(body.split('\n')[l]))
+        add('warning','UW-005',L(l),'Движение без Time.deltaTime — скорость зависит от FPS','> '+body.split('\n')[l].trim());
+    });
+    scan(/new\s+(Vector2|Vector3|Vector4|Quaternion|Color32|Color|Ray|Bounds|List<|Dictionary<)\b/g, body, 0, (mm,l)=>add('log','UL-006',L(l),'Аллокация «new '+mm[1]+'» каждый кадр — лишний груз для сборщика мусора','> '+body.split('\n')[l].trim()));
+    scan(/"\s*\+|\+\s*"/g, body, 0, (mm,l)=>add('log','UL-007',L(l),'Конкатенация строк в Update создаёт мусор — StringBuilder или обновление по событию'));
+    scan(/Resources\.Load\s*\(/g, body, 0, (mm,l)=>add('warning','UW-009',L(l),'Resources.Load в Update — загрузка с диска каждый кадр; кэшируйте ассет'));
+  });
+
+  /* ===========================================================
+     КАТЕГОРИЯ: REINIT-BUG (грязная статика / Domain Reload)
+     =========================================================== */
+  const hasDomainGuard = /RuntimeInitializeOnLoadMethod|SubsystemRegistration|playModeStateChanged|AssemblyReloadEvents|OnDomainReload|ResetStatics/.test(code);
+
+  const staticDecls = [];
+  code.split('\n').forEach((ln,i)=>{
+    const ms = ln.match(/^\s*(?:public|private|protected|internal)?\s*static\s+(?:volatile\s+)?(?!readonly\b|event\b|class\b|void\b|partial\b|async\b)([\w.<>\[\],?]+)\s+(\w+)\s*(?:=[^=]|;)/);
+    if(ms) staticDecls.push({type:ms[1], name:ms[2], line:i+1, decl:ln.trim()});
+  });
+  staticDecls.forEach((s,idx)=>{
+    if(hasDomainGuard) return;
+    if(idx > 3){ return; }
+    add('warning','RX-001', s.line,
+      'static-состояние «'+s.name+'» переживёт выход из Play Mode, если отключён Domain Reload (Enter Play Mode Options) — обнуляйте его в [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]',
+      '> '+s.decl, 'reinit');
+  });
+  if(staticDecls.length > 4 && !hasDomainGuard)
+    add('warning','RX-001', staticDecls[4].line, 'И ещё '+(staticDecls.length-4)+' static-полей в этом файле — все они попадут в reinit-баг. Сброс статики лучше собрать в один ResetStatics()', '', 'reinit');
+
+  const instM = code.match(/public\s+static\s+[\w.<>]+\s+(Instance|instance|_instance)\b/);
+  if(instM){
+    const iname = instM[1];
+    if(!new RegExp(iname.replace(/[.*?^${}()|[\]\\]/g,'\\$&')+'\\s*=\\s*null').test(code))
+      add('warning','RX-002', lineOf(instM[0]),
+        'Синглтон «'+iname+'» нигде не обнуляется: при отключённом Domain Reload он останется ссылкой на уничтоженный объект и Awake новой сцены сломается — сбрасывайте в OnDestroy / RuntimeInitializeOnLoadMethod',
+        '', 'reinit');
+    if(/DontDestroyOnLoad/.test(code) && !/Instance\s*!=\s*(null|this)|{\s*Destroy\s*\(\s*gameObject/.test(code))
+      add('warning','RX-005', lineOf('DontDestroyOnLoad'),
+        'DontDestroyOnLoad без guard-а от дубликата: при повторном входе в сцену появится второй синглтон. Нужно «if ('+iname+' != null && '+iname+' != this) { Destroy(gameObject); return; }»',
+        '', 'reinit');
+  }
+
+  scan(/\bstatic\s+event\s+([\w.<>]+)\s+(\w+)/g, code, 1, (mm,l)=>{
+    if(!new RegExp(mm[2]+'\\s*-=').test(code))
+      add('warning','RX-003',l,
+        'Статическое событие «'+mm[2]+'»: подписка без отписки. Подписчики переживают перезагрузку сцены и Play Mode — обработчик прошлого запуска вызовется снова (OnWaveCleared сработает дважды)',
+        '', 'reinit');
+  });
+
+  if(!hasDomainGuard && staticDecls.length)
+    scan(/\b(\w+)\s*\+\+\s*;/g, code, 1, (mm,l)=>{
+      if(staticDecls.some(s=>s.name===mm[1]))
+        add('log','RX-004',l,'Статический счётчик «'+mm[1]+'» продолжит считать с прошлой сессии Play Mode — задавайте стартовое значение при reinit, иначе ID дублируются и данные перезаписываются','', 'reinit');
+    });
+
+  scan(/SceneManager\.(sceneLoaded|sceneUnloaded|activeSceneChanged)\s*\+=/g, code, 1, (mm,l)=>{
+    if(!new RegExp('SceneManager\\.'+mm[1]+'\\s*-=').test(code))
+      add('warning','RX-008',l,'Подписка на SceneManager.'+mm[1]+' без отписки — после перезагрузки сцены подписок станет две, три, десять','', 'reinit');
+  });
+
+  if(/\b(UnityEditor|AssetDatabase|EditorApplication|EditorGUILayout|EditorPrefs|SessionState|MenuItem|EditorUtility|Handles|Gizmos)\b/.test(code)){
+    const idxEd = code.search(/\b(UnityEditor|AssetDatabase|EditorApplication|EditorPrefs|SessionState|MenuItem|EditorUtility)\b/);
+    if(idxEd >= 0){
+      if(/#if\s+UNITY_EDITOR/.test(code))
+        add('log','RX-006', lineAt(code, idxEd), 'Editor-API изолирован #if UNITY_EDITOR — так и надо. Только не забудьте #endif и не оставляйте половину логики внутри условной компиляции','', 'reinit');
+      else
+        add('error','RX-006', lineAt(code, idxEd), 'Editor-API (UnityEditor.*) без #if UNITY_EDITOR: в редакторе скомпилируется, билд плеера — нет. Оберните блок в #if UNITY_EDITOR / #endif','', 'reinit');
+    }
+  }
+
+  /* ===========================================================
+     КАТЕГОРИЯ: READBACK (синхронная вычитка GPU → CPU)
+     =========================================================== */
+  const rb = (sev,rid,line,msg,snip)=>add(sev,rid,line,msg,snip,'readback');
+  const hot = idx => inRanges(updRanges, idx);
+
+  scan(/\.ReadPixels\s*\(/g, code, 1, (mm,l)=> rb(hot(mm.index)?'warning':'log','RB-001',l,
+    'Texture2D.ReadPixels — синхронный readback: главный поток ждёт GPU, кадр залипает на 1–10 мс. Для скриншотов и замеров используйте AsyncGPUReadback.Request', '> '+L1(l)));
+
+  scan(/RenderTexture\.active\s*=\s*([^;=]+);/g, code, 1, (mm,l)=>{
+    if(!/RenderTexture\.active\s*=\s*null\s*;/.test(code))
+      rb('warning','RB-002',l,'RenderTexture.active остаётся подменённым: последующие блиты уедут не туда, а временный RT не освободится. Возвращайте RenderTexture.active = null (или сохранённый предыдущий) сразу после вычитки','> '+L1(l));
+  });
+
+  scan(/AsyncGPUReadback\.Request\s*\(/g, code, 1, (mm,l)=>{
+    const tail = code.split('\n').slice(l-1, l+14).join('\n');
+    if(/hasError|\.done|WaitForCompletion/.test(tail) === false)
+      rb('warning','RB-003',l,'AsyncGPUReadback.Request без обработки результата: проверяйте request.hasError и обрабатывайте колбэк — иначе тихо получите мусор вместо данных','');
+    else
+      rb('log','RB-003',l,'AsyncGPUReadback — верное направление. Следите за частотой (throttle) и не аллоцируйте буфер под каждый запрос','');
+  });
+
+  scan(/AsyncGPUReadback\.WaitAllRequests\s*\(/g, code, 1, (mm,l)=>{
+    if(inRanges(teardownRanges, mm.index))
+      rb('log','RB-004',l,'WaitAllRequests() внутри OnDisable/OnDestroy/OnApplicationQuit — корректно: ждём GPU только при выходе, а не в игровом кадре','');
+    else
+      rb('warning','RB-004',l,'WaitAllRequests() останавливает главный поток, пока GPU не отдаст все данные — тот же стоп пайплайна, только вежливее. Допустимо только при выходе из игры (OnDisable/OnApplicationQuit)','');
+  });
+
+  if(/ComputeBuffer|GraphicsBuffer/.test(code))
+    scan(/\.GetData\s*\(/g, code, 1, (mm,l)=> rb(hot(mm.index)?'warning':'log','RB-005',l,
+      'ComputeBuffer/GraphicsBuffer.GetData — синхронная вычитка с GPU: CPU блокируется до готовности данных. Разрежьте чтение по кадрам через AsyncGPUReadback или readback в меньшем размере', '> '+L1(l)));
+
+  scan(/\.GetPixels(32)?\s*\(/g, code, 1, (mm,l)=> rb(hot(mm.index)?'warning':'log','RB-006',l,
+    'GetPixels читает CPU-копию текстуры, но требует Read/Write Enabled, дорого стоит и часто идёт следом за readback. Для горячих путей — GetRawTextureData<T>() в NativeArray (+ Job/Burst)', '> '+L1(l)));
+
+  scan(/\.Apply\s*\(\s*\)/g, code, 1, (mm,l)=> rb('log','RB-007',l,
+    'Apply() без аргументов делает синхронный upload и оставляет CPU-копию текстуры в памяти. Для скриншотов и процедурных текстур — Apply(false, true)', '> '+L1(l)));
+
+  scan(/ScreenCapture\.CaptureScreenshot\s*\(/g, code, 1, (mm,l)=> rb(hot(mm.index)?'warning':'log','RB-008',l,
+    'CaptureScreenshot синхронизирует GPU с CPU и резервирует полный буфер экрана: спайк в профиле. Для записи видео/превью — AsyncGPUReadback + EncodeToPNG, а файл писать вне главного потока',''));
+
+  if(/RenderTexture\.GetTemporary\s*\(/.test(code) && !/ReleaseTemporary\s*\(/.test(code))
+    rb('warning','RB-009', lineOf('RenderTexture.GetTemporary'),'RenderTexture.GetTemporary без ReleaseTemporary: пул временных RT переполняется, память не возвращается, на мобилках ловите OOM','');
+
+  scan(/[\w.<>\]]+\s*targetTexture\s*=/g, code, 1, (mm,l)=> rb(hot(mm.index)?'warning':'log','RB-010',l,
+    'Рендер в targetTexture: не читайте эту RT в тот же кадр — данные ещё не готовы, CPU будет ждать. Читайте со задержкой в 1–2 кадра через AsyncGPUReadback',''));
+
+  scan(/\.GetRawTextureData\s*\(/g, code, 1, (mm,l)=> rb('log','RB-011',l,
+    'GetRawTextureData<T>() — дешёвый доступ к сырым данным без конвертации, но порядок и формат данных зависят от платформы и формата текстуры: проверяйте GraphicsFormat',''));
+
+  // empty Unity messages
+  ['Start','Update','LateUpdate','FixedUpdate','Awake','OnGUI'].forEach(name=>{
+    (blocks[name]||[]).forEach(b=>{
+      if(b.body.trim()==='') add('log','UL-008', lineAt(code,b.from), 'Пустой '+name+'() — Unity всё равно вызывает его каждый кадр/каждый старт, удалите');
+    });
+  });
+
+  issues.sort((a,b)=>a.line-b.line);
+  return issues;
+}
+
+function scoreOf(issues){
+  let s = 100;
+  issues.forEach(i=>{ s -= i.sev==='error'?14 : i.sev==='warning'?5 : 2; });
+  return Math.max(4, Math.min(100, s));
+}
+function verdictOf(s){
+  if(s>=90) return {t:'Боеготов', c:'var(--green)'};
+  if(s>=70) return {t:'В целом годен', c:'var(--green)'};
+  if(s>=45) return {t:'Требует лечения', c:'var(--amber)'};
+  if(s>=25) return {t:'Сильно болит', c:'var(--amber)'};
+  return {t:'Реанимация', c:'var(--red)'};
+}
+
+/* ============================================================
+   RENDERING
+   ============================================================ */
+let renderTimer = null;
+function renderCode(){
+  const f = files[current];
+  const code = ta.value;
+  f.code = code;
+  const lines = code.split('\n');
+  const sevByLine = new Map();
+  (f.issues||[]).forEach(i=>{
+    const rank = {error:3,warning:2,log:1};
+    if(!sevByLine.has(i.line) || rank[i.sev]>rank[sevByLine.get(i.line)]) sevByLine.set(i.line, i.sev);
+  });
+  const clsMap = {error:'ce',warning:'cw',log:'cl2'};
+  const gutMap = {error:'le',warning:'lwn',log:'ll'};
+  let bHtml='', gHtml='';
+  lines.forEach((ln,i)=>{
+    const n=i+1, sv=sevByLine.get(n);
+    bHtml += '<div class="cl'+(sv?' '+clsMap[sv]:'')+'" data-line="'+n+'">'+hlLine(ln)+' </div>';
+    gHtml += '<div'+(sv?' class="'+gutMap[sv]+'"':'')+'>'+n+'</div>';
+  });
+  bHtml += '<div class="cl">&nbsp;</div>'; gHtml += '<div>&nbsp;</div>';
+  backdrop.innerHTML = bHtml;
+  gutter.innerHTML = gHtml;
+  syncScroll();
+  $('etab').classList.toggle('dirty', f.analyzed && f.issues===undefined ? false : (f.code!==f.analyzedCode));
+  $('etabName').textContent = f.name;
+}
+
+function syncScroll(){
+  backdrop.style.transform = 'translate('+(-ta.scrollLeft)+'px,'+(-ta.scrollTop)+'px)';
+  gutter.firstElementChild && (gutter.scrollTop = ta.scrollTop);
+}
+
+function renderProject(){
+  plistEl.innerHTML = '';
+  files.forEach((f,i)=>{
+    const el = document.createElement('div');
+    el.className = 'pitem'+(i===current?' active':'');
+    let badge = '';
+    if(f.analyzed){
+      const e = (f.issues||[]).filter(x=>x.sev==='error').length;
+      const w = (f.issues||[]).filter(x=>x.sev==='warning').length;
+      badge = (e||w) ? '<span class="fb e">'+(e+w)+'</span>' : '<span class="fb ok">✓</span>';
+    }
+    el.innerHTML = '<span class="fic">C#</span><span class="fn">'+esc(f.name)+'</span>'+badge;
+    el.onclick = ()=>{ selectFile(i); };
+    plistEl.appendChild(el);
+  });
+}
+
+function makeRow(iss, idx, src){
+  const row = document.createElement('div');
+  row.className = 'crow '+iss.sev;
+  row.style.animationDelay = Math.min(idx*45, 500)+'ms';
+  row.dataset.sev = iss.sev;
+  row.dataset.cat = iss.cat || '';
+  if(!filters.has(iss.sev) || (iss.cat && !catFilters.has(iss.cat))) row.style.display='none';
+  const ctx = src==='unity'
+    ? 'Unity Editor' + (iss.file ? (' · '+iss.file+(iss.line?' (строка '+iss.line+')':'')) : ' · из лога')
+    : (iss.fileName||'')+(iss.line?' (строка '+iss.line+')':'');
+  row.innerHTML = ICO[iss.sev]
+    + '<div><span class="msg">'+esc(iss.msg)+'</span>'
+    + '<span class="ctx">'+esc(ctx)+'</span>'
+    + (iss.snip?'<span class="snip">'+esc(iss.snip)+'</span>':'')
+    + (iss.explain?'<span class="expl">'+esc(iss.explain)+'</span>':'')
+    + '</div><span class="rid'+(src==='unity'?' u':'')+'">'+esc(iss.rid)+'</span>';
+  row.onclick = ()=> src==='unity' ? jumpToEntry(iss) : jumpToLine(iss.line);
+  return row;
+}
+
+function renderConsole(){
+  const f = files[current];
+  clist.innerHTML = '';
+  const heur = (f.analyzed ? (f.issues||[]) : []).map(i=>Object.assign({}, i, {fileName:f.name}));
+  const uni  = unityEntries.slice();
+  const counts = {error:0,warning:0,log:0};
+  heur.concat(uni).forEach(i=>counts[i.sev]++);
+  $('fErr').firstElementChild.textContent = counts.error;
+  $('fWarn').firstElementChild.textContent = counts.warning;
+  $('fLog').firstElementChild.textContent = counts.log;
+
+  if(!heur.length && !uni.length){
+    clist.innerHTML = f.analyzed
+      ? '<div class="cempty" style="color:var(--green)">✓ Компилятор бы не покраснел.<br>Эвристики молчат — <b>но рантайм всё равно проверяйте в Editor</b>.</div>'
+      : '<div class="cempty">Консоль пуста.<br><b>Загрузите .cs</b> или добавьте сэмпл — затем жмите <b>⚡ Analyze</b>.<br>Либо вставьте лог настоящего Unity: <b>📥 Вставить лог Unity</b>.</div>';
+    return;
+  }
+  let idx = 0;
+  if(uni.length){
+    const d = document.createElement('div');
+    d.className = 'cdiv'; d.textContent = 'Unity Editor · из лога ('+uni.length+')';
+    clist.appendChild(d);
+    uni.forEach(i=>clist.appendChild(makeRow(i, idx++, 'unity')));
+  }
+  if(heur.length){
+    const d = document.createElement('div');
+    const rc = heur.filter(i=>i.cat==='reinit').length, gc = heur.filter(i=>i.cat==='readback').length;
+    d.className = 'cdiv';
+    d.textContent = 'Статический анализ · '+(f.name||'')+' ('+heur.length+')'
+      + (rc?' · 🔁 reinit '+rc:'') + (gc?' · 📤 readback '+gc:'');
+    clist.appendChild(d);
+    heur.forEach(i=>clist.appendChild(makeRow(i, idx++, 'script')));
+  }
+  applyFilters();
+}
+
+function applyFilters(){
+  clist.querySelectorAll('.crow').forEach(r=>{
+    const sevOk = filters.has(r.dataset.sev);
+    const cat = r.dataset.cat;
+    const catOk = !cat || catFilters.has(cat);
+    r.style.display = (sevOk && catOk) ? '' : 'none';
+  });
+}
+
+function openAt(file, line){
+  const nm = baseName(file).toLowerCase();
+  let idx = files.findIndex(f=>f.name.toLowerCase()===nm);
+  if(idx < 0){
+    const total = Math.max(line||1, 4);
+    const arr = [];
+    for(let i=1; i<=total; i++){
+      arr.push(i===1 ? ('// Файл не загружен — восстановлен из лога Unity: '+baseName(file))
+        : (i===line ? ('// ← упало здесь (строка '+line+' из стек-трейса)') : ''));
+    }
+    files.push({name:baseName(file), code:arr.join('\n'), analyzed:false, issues:null});
+    idx = files.length-1;
+    renderProject();
+  }
+  selectFile(idx);
+  if(line) setTimeout(()=>jumpToLine(line), 80);
+}
+
+function jumpToEntry(e){
+  if(e.file) openAt(e.file, e.line);
+  else if(e.line) jumpToLine(e.line);
+}
+
+function renderInspector(){
+  const f = files[current];
+  const body = $('inspBody');
+  const lines = f.code.split('\n').length;
+  const classes = (f.code.match(/\bclass\s+(\w+)/g)||[]).map(s=>s.replace('class','').trim());
+  const mono = /:\s*MonoBehaviour/.test(f.code);
+
+  if(!f.analyzed){
+    body.innerHTML =
+      '<div class="ifile"><span class="fic">C#</span><div><div class="nm">'+esc(f.name)+'</div><div class="tp">'+(mono?'MonoBehaviour Script':'C# Script')+' · '+lines+' строк</div></div></div>'
+      +'<div class="meter"><div class="lbl"><span>Script Health</span><b>—</b></div><div class="mtrack"><div class="mfill"></div></div><div class="mverdict" style="color:var(--dim)">ещё не анализировался</div></div>'
+      +'<div class="toplist"><div class="ti">Нажмите <b>⚡ Analyze</b> — инспектор покажет диагноз.</div></div>'
+      +(classes.length?'<div class="legend">классы: '+classes.map(esc).join(', ')+'</div>':'');
+    return;
+  }
+  const issues = f.issues||[];
+  const c = {error:0,warning:0,log:0};
+  issues.forEach(i=>c[i.sev]++);
+  const score = scoreOf(issues);
+  const v = verdictOf(score);
+  const fillCol = score>=70?'var(--green)':score>=40?'var(--amber)':'var(--red)';
+  const top = issues.slice(0,4);
+
+  body.innerHTML =
+    '<div class="ifile"><span class="fic">C#</span><div><div class="nm">'+esc(f.name)+'</div><div class="tp">'+(mono?'MonoBehaviour Script':'C# Script')+' · '+lines+' строк</div></div></div>'
+    +'<div class="meter"><div class="lbl"><span>Script Health</span><b>'+score+' / 100</b></div><div class="mtrack"><div class="mfill" id="mfill"></div></div><div class="mverdict" style="color:'+v.c+'">'+v.t+'</div></div>'
+    +'<div class="stats3">'
+      +'<div class="stat se"><b>'+c.error+'</b><span>errors</span></div>'
+      +'<div class="stat sw"><b>'+c.warning+'</b><span>warnings</span></div>'
+      +'<div class="stat sl"><b>'+c.log+'</b><span>logs</span></div>'
+    +'</div>'
+    +(function(){
+        const rn = issues.filter(i=>i.cat==='reinit').length, rdb = issues.filter(i=>i.cat==='readback').length;
+        if(!rn && !rdb) return '';
+        return '<div class="catpills">'
+          + (rn?'<span class="catpill reinit">🔁 Reinit-баг · '+rn+' найдено</span>':'')
+          + (rdb?'<span class="catpill rb">📤 Readback · '+rdb+' найдено</span>':'')
+          + '</div>';
+      })()
+    +(top.length
+      ? '<div class="toplist">'+top.map(i=>'<div class="ti"><b>'+i.rid+'</b> · '+esc(i.msg.length>72?i.msg.slice(0,72)+'…':i.msg)+'</div>').join('')+'</div>'
+      : '<div class="toplist"><div class="ti">Чисто. Подозрительно чисто.</div></div>')
+    +'<div class="legend"><span><i style="background:var(--red2)"></i>error — не скомпилируется / сломает игру</span><span><i style="background:var(--amber)"></i>warning — работает, но больно</span><span><i style="background:#8b93a1"></i>log — стиль, мусор, советы</span></div>'
+    +(classes.length?'<div class="legend">классы: '+classes.map(esc).join(', ')+'</div>':'');
+
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    const mf = $('mfill'); if(mf){ mf.style.background = fillCol; mf.style.width = score+'%'; }
+  }));
+}
+
+function selectFile(i){
+  current = i;
+  ta.value = files[i].code;
+  renderProject();
+  renderCode();
+  renderConsole();
+  renderInspector();
+  $('ttl').textContent = files[i].name + ' — ScriptCheckup.unity';
+}
+
+function runAnalyze(){
+  const f = files[current];
+  f.code = ta.value;
+  f.issues = analyze(f.code);
+  f.analyzed = true;
+  f.analyzedCode = f.code;
+  const btn = $('btnAnalyze');
+  btn.classList.remove('zap'); void btn.offsetWidth; btn.classList.add('zap');
+  renderProject(); renderCode(); renderConsole(); renderInspector();
+  $('sbState').textContent = files[current].name + ': ' + f.issues.length + ' findings';
+}
+
+function jumpToLine(line){
+  const row = backdrop.querySelector('.cl[data-line="'+line+'"]');
+  if(!row) return;
+  const lh = 22;
+  ta.scrollTop = Math.max(0, (line-1)*lh - ta.clientHeight/2 + 40);
+  row.classList.remove('flash'); void row.offsetWidth; row.classList.add('flash');
+}
+
+/* ---------- files: drop / open / sample ---------- */
+function addFile(name, code){
+  files.push({name, code, analyzed:false, issues:null});
+  selectFile(files.length-1);
+}
+$('btnOpen').onclick = ()=>$('fileInput').click();
+$('fileInput').onchange = e=>{
+  [...e.target.files].forEach(file=>{
+    const r = new FileReader();
+    r.onload = ()=>addFile(file.name.replace(/\.\w+$/,'')+'.cs', r.result);
+    r.readAsText(file);
+  });
+  e.target.value='';
+};
+$('btnSample').onclick = ()=>{
+  const s = SAMPLES[sampleIdx % SAMPLES.length]; sampleIdx++;
+  addFile(s.name, s.code);
+  runAnalyze();
+};
+
+const projectEl = $('project');
+['dragenter','dragover'].forEach(ev=>projectEl.addEventListener(ev,e=>{e.preventDefault();projectEl.classList.add('dragover');}));
+['dragleave','drop'].forEach(ev=>projectEl.addEventListener(ev,e=>{e.preventDefault();projectEl.classList.remove('dragover');}));
+projectEl.addEventListener('drop', e=>{
+  [...e.dataTransfer.files].forEach(file=>{
+    const r = new FileReader();
+    r.onload = ()=>addFile(file.name, r.result);
+    r.readAsText(file);
+  });
+});
+
+/* ---------- editor events ---------- */
+ta.addEventListener('input', ()=>{
+  clearTimeout(renderTimer);
+  renderTimer = setTimeout(renderCode, 90);
+});
+ta.addEventListener('scroll', ()=>requestAnimationFrame(syncScroll));
+ta.addEventListener('keydown', e=>{
+  if(e.key==='Tab'){
+    e.preventDefault();
+    const s = ta.selectionStart;
+    ta.setRangeText('    ', s, ta.selectionEnd, 'end');
+    ta.dispatchEvent(new Event('input'));
+  }
+  if((e.ctrlKey||e.metaKey) && e.key==='Enter'){ e.preventDefault(); runAnalyze(); }
+});
+$('btnAnalyze').onclick = runAnalyze;
+$('btnClear').onclick = ()=>{
+  unityEntries = [];
+  renderConsole();
+  $('sbState').textContent = 'Console cleared';
+};
+
+/* ---------- Unity log modal ---------- */
+const modal = $('modal'), mText = $('mText');
+function openModal(){ modal.classList.add('on'); mText.focus(); }
+function closeModal(){ modal.classList.remove('on'); }
+$('btnLog').onclick = openModal;
+$('mLx').onclick = closeModal;
+modal.addEventListener('click', e=>{ if(e.target === modal) closeModal(); });
+
+/* ---------- self-test: правила vs демо-файлы vs фиксы ---------- */
+const selfModal = $('selfModal');
+function grabCats(code){
+  const iss = analyze(code);
+  return {all:iss, re:iss.filter(i=>i.cat==='reinit'), rb:iss.filter(i=>i.cat==='readback')};
+}
+function runSelfTest(render){
+  const S = {}; SAMPLES.forEach(s=>S[s.name] = s);
+  const demoR = grabCats(S['GameSession.cs'].code);
+  const demoP = grabCats(S['PixelGrabber.cs'].code);
+  const fixR  = grabCats(FIXES.reinit.code);
+  const fixP  = grabCats(FIXES.readback.code);
+
+  const res = [];
+  const chk = (group, t, cond, d)=>res.push({group, t, ok:!!cond, d:d||''});
+  const has = (arr, rid)=>arr.some(i=>i.rid===rid);
+  const cnt = (arr, rid)=>arr.filter(i=>i.rid===rid).length;
+
+  chk('reinit', 'RX-001 — грязная статика найдена в GameSession.cs', has(demoR.all,'RX-001'), cnt(demoR.all,'RX-001')+' static-полей');
+  chk('reinit', 'RX-002 — синглтон без сброса', has(demoR.all,'RX-002'), '');
+  chk('reinit', 'RX-003 — static event без отписки', has(demoR.all,'RX-003'), '');
+  chk('reinit', 'RX-004 — счётчик живёт между запусками', has(demoR.all,'RX-004'), cnt(demoR.all,'RX-004')+' совпадений');
+  chk('reinit', 'RX-005 — DontDestroyOnLoad без guard', has(demoR.all,'RX-005'), '');
+  chk('reinit', 'ложных readback-находок нет', demoR.rb.length===0, 'readback: '+demoR.rb.length);
+
+  ['RB-001','RB-002','RB-003','RB-005','RB-006','RB-007','RB-008'].forEach(rid=>{
+    const desc = { 'RB-001':'ReadPixels', 'RB-002':'RenderTexture.active без сброса', 'RB-003':'AsyncGPUReadback без hasError',
+      'RB-005':'ComputeBuffer.GetData', 'RB-006':'GetPixels', 'RB-007':'Apply() без аргументов', 'RB-008':'CaptureScreenshot' }[rid];
+    chk('readback', rid+' — '+desc+' найден', has(demoP.all, rid), '');
+  });
+  chk('readback', 'ложных reinit-находок нет', demoP.re.length===0, 'reinit: '+demoP.re.length);
+
+  // для фиксов считаем «чисто» = ноль error/warning в категории (инфо-логи допустимы)
+  const probs = arr => arr.filter(i=>i.sev!=='log');
+  chk('fix', 'Фикс ReinitSafeGameManager.cs — reinit-проблем нет', probs(fixR.re).length===0, probs(fixR.re).map(i=>i.rid).join(', ')||'0 error/warning');
+  chk('fix', 'Фикс AsyncScreenGrabber.cs — readback-проблем нет', probs(fixP.rb).length===0, probs(fixP.rb).map(i=>i.rid).join(', ')||'0 error/warning');
+
+  const pass = res.filter(r=>r.ok).length;
+  if(render){
+    const groupTitle = {reinit:'🔁 Правила Reinit-бага', readback:'📤 Правила Readback', fix:'🛠 Фиксы глушат правила'};
+    let html = '';
+    ['reinit','readback','fix'].forEach(g=>{
+      html += '<div class="tgroup">'+groupTitle[g]+'</div>';
+      res.filter(r=>r.group===g).forEach(r=>{
+        html += '<div class="trow'+(r.ok?'':' bad')+'"><span class="ok">'+(r.ok?'✓':'✗')+'</span><div><b>'+esc(r.t)+'</b></div>'+(r.d?'<span class="d2">'+esc(r.d)+'</span>':'')+'</div>';
+      });
+    });
+    html += '<div class="tsum'+(pass===res.length?'':' bad')+'">'+pass+' / '+res.length+' проверок пройдено'
+      + (pass===res.length ? ' — правила Reinit и Readback работают, фиксы их глушат' : ' — есть расхождения, см. красные строки')+'</div>';
+    $('selfBody').innerHTML = html;
+    selfModal.classList.add('on');
+  }
+  $('sbState').textContent = 'Self-test: '+pass+' / '+res.length+' проверок пройдено';
+  return {pass, total:res.length, res};
+}
+$('btnSelf').onclick = ()=>runSelfTest(true);
+$('selfLx').onclick = ()=>selfModal.classList.remove('on');
+selfModal.addEventListener('click', e=>{ if(e.target === selfModal) selfModal.classList.remove('on'); });
+
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape'){ closeModal(); selfModal.classList.remove('on'); }
+});
+$('mLd').onclick = ()=>{ mText.value = SAMPLE_LOG; mText.focus(); };
+$('mLf').onclick = ()=>$('mLinput').click();
+$('mLinput').onchange = e=>{
+  const file = e.target.files[0]; if(!file) return;
+  const r = new FileReader();
+  r.onload = ()=>{ mText.value = r.result.slice(0, 400000); };
+  r.readAsText(file);
+  e.target.value = '';
+};
+$('mLn').onclick = ()=>{
+  const parsed = parseUnityLog(mText.value);
+  if(!parsed.length){
+    $('sbState').textContent = 'Лог не распознан — проверьте формат';
+    mText.focus();
+    return;
+  }
+  unityEntries = parsed;
+  closeModal();
+  renderConsole();
+  $('sbState').textContent = 'Из лога Unity: '+parsed.length+' записей, клик — переход к строке';
+  const f = files[current];
+  renderInspector();
+  if(f) renderProject();
+};
+$('mLc').onclick = ()=>{ unityEntries = []; renderConsole(); closeModal(); $('sbState').textContent = 'Лог Unity убран'; };
+
+[['fErr','error'],['fWarn','warning'],['fLog','log']].forEach(([id,sev])=>{
+  $(id).onclick = ()=>{
+    const btn = $(id);
+    if(filters.has(sev)){ filters.delete(sev); btn.classList.add('off'); }
+    else { filters.add(sev); btn.classList.remove('off'); }
+    applyFilters();
+  };
+});
+document.querySelectorAll('.cbar .cb.cat').forEach(btn=>{
+  btn.onclick = ()=>{
+    const c = btn.dataset.cat;
+    if(catFilters.has(c)){ catFilters.delete(c); btn.classList.remove('on'); }
+    else { catFilters.add(c); btn.classList.add('on'); }
+    applyFilters();
+    const vis = clist.querySelectorAll('.crow:not([style*="none"])').length;
+    $('sbState').textContent = 'Категория '+c+': '+(catFilters.has(c)?'показана':'скрыта')+' · видно записей: '+vis;
+  };
+});
+
+/* ---------- play mode ---------- */
+let playing = false, paused = false, frame = 0, lastT = 0;
+const toolbar = $('toolbar');
+function loop(t){
+  if(playing && !paused){
+    frame++;
+    $('sbFrame').textContent = 'F ' + String(frame).padStart(6,'0');
+    if(t - lastT > 400){
+      lastT = t;
+      $('sbCpu').textContent = 'CPU ' + (0.2 + Math.random()*0.7).toFixed(2) + ' ms';
+    }
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+$('btnPlay').onclick = ()=>{
+  playing = !playing; paused = false;
+  document.body.classList.remove('paused');
+  toolbar.classList.toggle('playing', playing);
+  $('sbState').textContent = playing ? 'Play Mode — анимации страницы в работе' : 'Analyzer ready';
+};
+$('btnPause').onclick = ()=>{
+  if(!playing) return;
+  paused = !paused;
+  document.body.classList.toggle('paused', paused);
+  $('sbState').textContent = paused ? 'Paused — всё живое заморожено' : 'Play Mode';
+};
+$('btnStep').onclick = ()=>{
+  if(!playing){ playing = true; toolbar.classList.add('playing'); }
+  paused = true; document.body.classList.add('paused');
+  frame++; $('sbFrame').textContent = 'F ' + String(frame).padStart(6,'0');
+  $('sbState').textContent = 'Step: +1 кадр';
+};
+
+/* ---------- fix snippets (reinit + readback) ---------- */
+const FIXES = {
+reinit:{ name:'ReinitSafeGameManager.cs', title:'Синглтон + сброс статики',
+code:`using System.Collections.Generic;
+using UnityEngine;
+
+// Лечение Reinit-бага: статика чистится при каждом входе в Play Mode,
+// старый синглтон не выживает, дубликаты от DontDestroyOnLoad отсекаются.
+public class ReinitSafeGameManager : MonoBehaviour
+{
+    public static ReinitSafeGameManager Instance { get; private set; }
+
+    // Вся изменяемая статика собрана в одном месте — её и сбрасываем.
+    private static readonly List<Enemy> AliveEnemies = new List<Enemy>();
+    private static int _nextId;
+    private static int _spawnedTotal;
+
+    public static event System.Action OnWaveCleared;
+
+    // Вызывается ДО Awake любой сцены — в том числе при Domain Reload = off.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics()
+    {
+        Instance = null;
+        AliveEnemies.Clear();
+        _nextId = 0;
+        _spawnedTotal = 0;
+        OnWaveCleared = null;   // иначе обработчики прошлого запуска вызовутся снова
+    }
+
+    private void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);        // защита от второго синглтона
+            return;
+        }
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
+        OnWaveCleared -= ShowVictory;   // всегда отписываемся
+    }
+
+    public Enemy Spawn(GameObject prefab)
+    {
+        GameObject go = Instantiate(prefab, Vector3.zero, Quaternion.identity);
+        Enemy e = go.GetComponent<Enemy>();
+        e.id = ++_nextId;
+        _spawnedTotal++;
+        AliveEnemies.Add(e);
+        return e;
+    }
+
+    public void ClearWave()
+    {
+        AliveEnemies.Clear();
+        OnWaveCleared?.Invoke();
+    }
+
+    private void ShowVictory()
+    {
+        Debug.Log("Волна зачищена. Всего заспавнено за сессию: " + _spawnedTotal);
+    }
+}`},
+readback:{ name:'AsyncScreenGrabber.cs', title:'Асинхронный readback без стопа пайплайна',
+code:`using System.IO;
+using Unity.Collections;
+using UnityEngine;
+using UnityEngine.Rendering;
+
+// Лечение readback: никаких синхронных ReadPixels/GetData.
+// Данные GPU забираем асинхронно, копию держим в NativeArray.
+public class AsyncScreenGrabber : MonoBehaviour
+{
+    [SerializeField] private Texture source;      // RenderTexture или Texture2D
+    [SerializeField] private int everyNthFrame = 30;
+    [SerializeField] private bool keepOnePerSession = true;
+
+    private int _frame;
+    private AsyncGPUReadbackRequest _pending;
+    private bool _busy;
+
+    private void Update()
+    {
+        if (_busy) return;                          // один запрос в полёте — этого достаточно
+        if (++_frame % everyNthFrame != 0) return;
+
+        _busy = true;
+        // Асинхронно: GPU отдаст данные, когда сможет, без ожидания главного потока.
+        _pending = AsyncGPUReadback.Request(source, 0, TextureFormat.RGBA32, OnReadbackDone);
+    }
+
+    private void OnReadbackDone(AsyncGPUReadbackRequest req)
+    {
+        _busy = false;
+
+        if (req.hasError)
+        {
+            Debug.LogWarning("Readback завершился с ошибкой — кадр пропущен");
+            return;
+        }
+
+        NativeArray<Color32> data = req.GetData<Color32>(0);
+        SavePreview(data, req.width, req.height);
+    }
+
+    private void SavePreview(NativeArray<Color32> data, int w, int h)
+    {
+        // Уменьшенная копия: 16x16 хватает для замеров яркости и цвета.
+        const int size = 16;
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                int sx = x * w / size;
+                int sy = y * h / size;
+                tex.SetPixel(x, y, data[sy * w + sx]);
+            }
+        }
+
+        tex.Apply(false, true);     // false — без синхронного upload, true — выкинуть CPU-копию
+        byte[] png = tex.EncodeToPNG();
+        Destroy(tex);
+
+        string path = Path.Combine(Application.persistentDataPath, "preview.png");
+        File.WriteAllBytes(path, png);
+    }
+
+    private void OnDisable()
+    {
+        // Единственное место, где ждём GPU — выход/остановка, а не игровой кадр.
+        if (_pending.done == false) _pending.WaitForCompletion();
+        AsyncGPUReadback.WaitAllRequests();
+    }
+}`}};
+
+let toastTimer = null;
+function toast(msg){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('on'), 2000);
+}
+function initFixCards(){
+  const ra = $('codeReinit'), rbEl = $('codeRb');
+  if(ra) ra.innerHTML = FIXES.reinit.code.split('\n').map(hlLine).join('\n');
+  if(rbEl) rbEl.innerHTML = FIXES.readback.code.split('\n').map(hlLine).join('\n');
+}
+function copyFix(key){
+  const code = FIXES[key].code;
+  const done = ()=>toast('Скопировано: '+FIXES[key].name+' ('+code.split('\n').length+' строк)');
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(code).then(done).catch(()=>fallbackCopy(code, done));
+  } else fallbackCopy(code, done);
+}
+function fallbackCopy(text, done){
+  const tmp = document.createElement('textarea');
+  tmp.value = text; document.body.appendChild(tmp); tmp.select();
+  try{ document.execCommand('copy'); done(); }catch(e){ toast('Не удалось скопировать — выделите код вручную'); }
+  document.body.removeChild(tmp);
+}
+function openFixInAnalyzer(key){
+  addFile(FIXES[key].name, FIXES[key].code);
+  runAnalyze();
+  window.scrollTo({top:0, behavior:'smooth'});
+  toast('Фикс загружен в анализатор: '+FIXES[key].name);
+}
+if($('cpReinit')) $('cpReinit').onclick = ()=>copyFix('reinit');
+if($('cpRb'))     $('cpRb').onclick     = ()=>copyFix('readback');
+if($('opReinit')) $('opReinit').onclick = ()=>openFixInAnalyzer('reinit');
+if($('opRb'))     $('opRb').onclick     = ()=>openFixInAnalyzer('readback');
+
+/* ---------- checklist ---------- */
+const checks = document.querySelectorAll('.pcheck');
+checks.forEach(ch=>ch.onclick = ()=>{
+  ch.classList.toggle('done');
+  const done = document.querySelectorAll('.pcheck.done').length;
+  $('progNum').textContent = done + ' / ' + checks.length;
+  $('pfill').style.width = (done/checks.length*100) + '%';
+  if(done === checks.length) $('progNum').textContent = 'можно билдить ✓';
+});
+
+/* ---------- scroll reveal ---------- */
+const io = new IntersectionObserver(es=>es.forEach(e=>{
+  if(e.isIntersecting){ e.target.classList.add('on'); io.unobserve(e.target); }
+}),{threshold:.12});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+$('btnLogTop').onclick = ()=>{
+  window.scrollTo({top:0, behavior:'smooth'});
+  setTimeout(openModal, 260);
+};
+
+/* ---------- boot ---------- */
+initFixCards();
+addFile(SAMPLES[0].name, SAMPLES[0].code);
+sampleIdx = 1;
+runAnalyze();
+const st = runSelfTest(false);
+$('sbState').textContent = 'Авто-тест правил при загрузке: '+st.pass+' / '+st.total+' · подробно — кнопка 🧪 Self-test';
+</script>
+</body>
+</html>
