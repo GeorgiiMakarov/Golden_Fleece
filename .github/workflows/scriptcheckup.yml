@@ -9,6 +9,9 @@ on:
     paths:
       - 'scriptcheckup/**'
 
+permissions:
+  security-events: write
+
 jobs:
   analyze:
     runs-on: ubuntu-latest
@@ -31,8 +34,9 @@ jobs:
         continue-on-error: true
         run: |
           TOOL=./scriptcheckup/ScriptCheckup.Cli/bin/Release/net8.0/ScriptCheckup.Cli.dll
-          dotnet "$TOOL" --dir unity-package --recursive --sarif scriptcheckup-unity-package.sarif --disable UL008 || \
+          dotnet "$TOOL" --dir unity-package --recursive --sarif scriptcheckup-unity-package.sarif --disable UL008 || true
           dotnet "$TOOL" --dir unity-project/Assets --recursive --sarif scriptcheckup-unity-project.sarif --disable UL008 || true
+          ls -la scriptcheckup-*.sarif
 
       - name: Upload SARIF
         uses: github/codeql-action/upload-sarif@v4
