@@ -1,0 +1,11 @@
+# qazbot-sidecar.yaml — вся интеграция в одном файле
+fleet_id: "qazbot-astana-01"
+robot_model: "agibot-a2"
+genie_events: "tcp://10.0.4.2:5555"      # read-only события Genie Studio Agent
+presence_sensor: "lidar:///dev/ttyUSB0"  # подтверждение зрителя
+pack_library: "https://packs.example.com/v1"
+sync_interval_sec: 300
+audit_endpoint: "https://audit.example.com/ingest"
+signing_key: "file:///etc/sidecar/ed25519.key"
+log_level: "info"
+resource_limits: { cpu_percent: 5, memory_mb: 200 }

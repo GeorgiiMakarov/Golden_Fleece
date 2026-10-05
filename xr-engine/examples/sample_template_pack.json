@@ -1,0 +1,101 @@
+{
+  "spec_version": "1.1.0",
+  "template_id": "tpl_demo_welcome_01",
+  "template_version": "1.0.0",
+  "sponsor_id": "demo_sponsor",
+  "personalization_level": 1,
+  "campaign": {
+    "campaign_id": "demo_welcome_week",
+    "window_start": "2026-10-01T00:00:00+06:00",
+    "window_end": "2026-10-07T23:59:59+06:00",
+    "locales": [
+      "ru"
+    ],
+    "max_impressions_per_user": 3,
+    "max_personalized_impressions_per_user": 2
+  },
+  "creative": {
+    "type": "video",
+    "uri": "pack://tpl_demo_welcome_01/creative.mp4",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "duration_sec": 15
+  },
+  "slots": [
+    {
+      "slot_id": "cup_name",
+      "kind": "name_token",
+      "character_role": "host",
+      "timeline": {
+        "start_ms": 3000,
+        "end_ms": 8000
+      },
+      "placement_mode": "head_locked",
+      "binding_rules": {
+        "keep_aspect_ratio": true,
+        "max_scale": 1.0,
+        "allow_recolor": false,
+        "allow_morph": false
+      }
+    },
+    {
+      "slot_id": "city_line",
+      "kind": "text_token",
+      "character_role": "host",
+      "timeline": {
+        "start_ms": 8000,
+        "end_ms": 13000
+      },
+      "placement_mode": "head_locked",
+      "binding_rules": {
+        "keep_aspect_ratio": true,
+        "max_scale": 1.0,
+        "allow_recolor": false,
+        "allow_morph": false
+      }
+    }
+  ],
+  "character_requirements": {
+    "require_original_design": true,
+    "min_assets": []
+  },
+  "fallback": {
+    "type": "video",
+    "uri": "pack://tpl_demo_welcome_01/creative_plain.mp4",
+    "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "disclosure": {
+    "label_text": "Реклама · персонализировано для вас",
+    "placement": "corner",
+    "synthetic_media_flag": false
+  },
+  "verification": {
+    "billable_event": "ImpressionValidated",
+    "min_dwell_ms": 1200,
+    "min_coverage_pct": 80.0,
+    "dismiss_counts_as": "not_billable"
+  },
+  "consent": {
+    "temporal_scopes": [
+      "single_request",
+      "campaign_window"
+    ],
+    "default_temporal": "single_request",
+    "targets": [
+      "campaign"
+    ],
+    "default_target": "campaign",
+    "classes_required": [
+      "profile_token"
+    ]
+  },
+  "compose": {
+    "instance_ttl_min": 60,
+    "instance_max_serves": 3,
+    "media_retention": "hash_only"
+  },
+  "age_gate": {
+    "minors_allowed": false,
+    "require_age_attestation": true
+  },
+  "manifest_sha256": "acd8176be78a2ec114004cdc34c3b7954724aecaae941271e24173de07c185a0"
+}

@@ -1,0 +1,30 @@
+{
+  "spec_version": "1.1.0",
+  "receipt_id": "csr_demo_0001",
+  "user_pseudonym": "u_pseudo_demo",
+  "template_id": "tpl_demo_welcome_01",
+  "template_version": "1.0.0",
+  "campaign_id": "demo_welcome_week",
+  "character_pack_id": "cp_demo_user_01",
+  "character_pack_version": "1.1.0",
+  "scope": {
+    "temporal": "single_request",
+    "target": "campaign"
+  },
+  "classes": {
+    "profile_token": true,
+    "likeness_binding": false
+  },
+  "granted_at": "2026-10-02T10:00:00+06:00",
+  "window": {
+    "not_before": "2026-10-02T00:00:00+06:00",
+    "not_after": "2026-10-02T23:59:59+06:00"
+  },
+  "medium": "preview_allow",
+  "policy_version": "adpolicy-1.1",
+  "signature": {
+    "alg": "Ed25519",
+    "key_id": "device_key_demo",
+    "sig": "BASE64SIG_PLACEHOLDER"
+  }
+}

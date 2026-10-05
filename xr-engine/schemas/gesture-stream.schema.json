@@ -1,0 +1,76 @@
+{
+  "$id": "https://github.com/GeorgiiMakarov/LIGHTWEIGHT-XR-CONTENT-ENGINE/blob/main/schemas/gesture-stream.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Input contract for unity/Emulator. A deterministic replay of raw hand frames (OpenXR gives 26 joint poses; v1 classifiers read the palm = joint 0). Each frame carries an expectedGesture label so the emulator can score detections: exactly one expected detection per labeled segment, zero false positives elsewhere.",
+  "properties": {
+    "fps": {
+      "description": "Frame rate the stream was authored at (sample: 90).",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "frames": {
+      "items": {
+        "properties": {
+          "expectedGesture": {
+            "default": "None",
+            "description": "Gesture the scenario intends. 'None' frames must produce zero detections (idle, too-slow / too-short swipes).",
+            "enum": [
+              "None",
+              "SwipeRight",
+              "SwipeLeft",
+              "PalmHold"
+            ],
+            "type": "string"
+          },
+          "joints": {
+            "description": "26 joints, index 0 = palm (XRHandJointID.Palm). Each joint is [x, y, z] in metres, head space.",
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 3,
+              "minItems": 3,
+              "type": "array"
+            },
+            "maxItems": 26,
+            "minItems": 26,
+            "type": "array"
+          },
+          "label": {
+            "description": "Scenario label, e.g. 'swipe_right'. Contiguous frames with the same label and expectedGesture form a scored segment.",
+            "type": "string"
+          },
+          "t_ms": {
+            "description": "Frame timestamp in milliseconds (video clock).",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "tracked": {
+            "default": true,
+            "description": "False = hand lost; classifiers must reset state.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "t_ms",
+          "joints"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "streamVersion": {
+      "pattern": "^[0-9]+\\.[0-9]+$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "streamVersion",
+    "fps",
+    "frames"
+  ],
+  "title": "Gesture stream — synthetic 26-joint input for the LayerSwitcher emulator",
+  "type": "object"
+}

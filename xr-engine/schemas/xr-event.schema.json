@@ -1,0 +1,249 @@
+{
+  "$defs": {
+    "GestureInteraction": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/envelope"
+        },
+        {
+          "properties": {
+            "action": {
+              "description": "Action taken by the phone in response.",
+              "enum": [
+                "switch_next",
+                "switch_prev",
+                "close"
+              ],
+              "type": "string"
+            },
+            "event_type": {
+              "const": "GestureInteraction"
+            },
+            "gesture": {
+              "description": "Fixed v1 gesture dictionary. A timed gesture only switches or closes.",
+              "enum": [
+                "swipe_right",
+                "swipe_left",
+                "palm_hold"
+              ],
+              "type": "string"
+            },
+            "timeline_position_ms": {
+              "description": "Position on the preset timeline when the gesture landed — the 'gesture by timing'.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "to_preset_id": {
+              "description": "Target preset for switch_next/switch_prev. Omitted for close.",
+              "pattern": "^preset_[a-z0-9_]{1,64}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "gesture",
+            "timeline_position_ms",
+            "action"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "ImpressionValidated": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/envelope"
+        },
+        {
+          "properties": {
+            "dwell_duration_ms": {
+              "description": "In-playback head stability duration in ms. The wire contract only requires a positive value; the billable attention floor (1200 ms) is a billing-policy parameter (xr-adtech-profile section 5, decision-intelligence-core), not part of this schema, so sub-floor impressions can still be recorded for funnel analytics.",
+              "minimum": 1,
+              "type": "integer"
+            },
+            "event_type": {
+              "const": "ImpressionValidated"
+            },
+            "head_stable": {
+              "description": "True when the stability criterion held for the whole dwell window.",
+              "type": "boolean"
+            },
+            "timeline_coverage_pct": {
+              "description": "Share of the preset timeline that played while the head stayed stable.",
+              "maximum": 100,
+              "minimum": 0,
+              "type": "number"
+            }
+          },
+          "required": [
+            "dwell_duration_ms",
+            "timeline_coverage_pct",
+            "head_stable"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "PresetClosed": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/envelope"
+        },
+        {
+          "properties": {
+            "completed": {
+              "description": "True when the full timeline played (watched_duration_ms >= planned duration and reason = timeline_end).",
+              "type": "boolean"
+            },
+            "event_type": {
+              "const": "PresetClosed"
+            },
+            "reason": {
+              "description": "Why the preset stopped. Mirrors preset_stop reasons in XR Session Protocol v1.",
+              "enum": [
+                "gesture_close",
+                "timeline_end",
+                "phone_decision",
+                "session_end",
+                "error"
+              ],
+              "type": "string"
+            },
+            "watched_duration_ms": {
+              "description": "How long the preset actually played.",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "reason",
+            "watched_duration_ms",
+            "completed"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "PresetServed": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/envelope"
+        },
+        {
+          "properties": {
+            "event_type": {
+              "const": "PresetServed"
+            },
+            "manifest_version": {
+              "description": "Manifest version actually rendered.",
+              "pattern": "^[0-9]+\\.[0-9]+$",
+              "type": "string"
+            },
+            "planned_duration_ms": {
+              "description": "timing.durationMs from the manifest.",
+              "minimum": 1,
+              "type": "integer"
+            },
+            "started_at_phone_ms": {
+              "description": "Preset clock t=0 (= preset_start.start_at_phone_ms).",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "trigger": {
+              "description": "Why this preset started: schedule = timeline/slot, head_dwell = pre-spawn dwell on an external anchor (billboard/storefront), phone_decision = decision-core choice, predictive_prepush = pre-warmed candidate promoted to play.",
+              "enum": [
+                "schedule",
+                "head_dwell",
+                "phone_decision",
+                "predictive_prepush"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "trigger",
+            "manifest_version",
+            "started_at_phone_ms",
+            "planned_duration_ms"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "envelope": {
+      "properties": {
+        "event_id": {
+          "description": "Unique event id. Maps to idempotency_key in decision-intelligence-core (I6): redelivery is a no-op.",
+          "format": "uuid",
+          "type": "string"
+        },
+        "event_type": {
+          "enum": [
+            "PresetServed",
+            "ImpressionValidated",
+            "GestureInteraction",
+            "PresetClosed"
+          ],
+          "type": "string"
+        },
+        "evidence_refs": {
+          "description": "REQUIRED non-empty (I3 evidence boundary). Opaque pointers to on-device proofs, e.g. 'dwell:preset_retail_spring_01:8200ms', 'gesture:palm_hold:timeline+12300ms', 'trigger:head_dwell:billboard_7'. Core treats refs as opaque; resolution happens in the evidence registry.",
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "occurred_at_phone_ms": {
+          "description": "Authoritative timestamp on the phone clock (phone is the time authority, XR Session Protocol v1 §2).",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "preset_id": {
+          "description": "Preset from the phone-side library this event belongs to.",
+          "pattern": "^preset_[a-z0-9_]{1,64}$",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "description": "Version of this event schema."
+        },
+        "session_id": {
+          "description": "XR session id (phone↔glasses session).",
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "event_type",
+        "schema_version",
+        "occurred_at_phone_ms",
+        "session_id",
+        "preset_id",
+        "evidence_refs"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/GeorgiiMakarov/LIGHTWEIGHT-XR-CONTENT-ENGINE/blob/main/schemas/xr-event.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Domain events emitted by the phone (edge node) for the XR advertising domain profile of decision-intelligence-core. Closes the three-part v2 architecture: timed preset manifests (what to play) + XR Session Protocol v1 (how phone and glasses talk) + this schema (what gets billed and audited). Mapping to core invariants: event_id feeds idempotency_key (I6 — duplicate delivery of the same event is safe); evidence_refs MUST be non-empty (I3 — core rejects any metric without evidence, i.e. no billing without an attention/interaction proof); occurred_at_phone_ms is the authoritative metric timestamp (phone owns the clock). Transport of these events to core (e.g. POST /v1/metrics) is outside XR Session Protocol v1, which covers phone↔glasses only.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/PresetServed"
+    },
+    {
+      "$ref": "#/$defs/ImpressionValidated"
+    },
+    {
+      "$ref": "#/$defs/GestureInteraction"
+    },
+    {
+      "$ref": "#/$defs/PresetClosed"
+    }
+  ],
+  "title": "XR Event Schema v1 — phone → decision-intelligence-core domain events",
+  "type": "object",
+  "unevaluatedProperties": false
+}

@@ -1,0 +1,8 @@
+{
+  "event_id": "evt_csr_demo_0002",
+  "event_type": "ConsentRevoked",
+  "occurred_at": "2026-10-02T12:30:00+06:00",
+  "receipt_id": "csr_demo_0001",
+  "user_pseudonym": "u_pseudo_demo",
+  "reason": "user_action"
+}

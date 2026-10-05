@@ -119,3 +119,16 @@ robot characters with an XR layer over a *moving* robot:
   hypothesis until measured on hardware (§10.10)
 
 Nothing here drives the robot: content, analysis and audit only.
+
+**4. XR engine snapshot** (`xr-engine/`) — snapshot of
+LIGHTWEIGHT-XR-CONTENT-ENGINE `main`: preset manifests, consent receipts /
+events, XR session protocol, gesture dictionary, reference composer, Unity
+gesture scripts, e2e stack check. The three Character Pack files inside are
+synced to addendum A1 (see `xr-engine/A1-SYNC.md`); canonical A1 sources live
+in `character-pack/`.
+
+**5. Defense-Dossier adapters** (`defense-dossier/adapters/`) — Signer
+(Ed25519), RFC 3161 TSA client (pure stdlib), Merkle anchor service + batch
+builder, with `Signer` / `TimestampAuthority` / `AuditTrail` /
+`ProjectionStore` protocol interfaces. Layout mirrors
+decision-intelligence-core so imports keep working.

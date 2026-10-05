@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>XrLayerSwitcherEmulator</RootNamespace>
+    <!-- Pure C#: no UnityEngine reference by design. The emulator replays
+         synthetic 26-joint streams through the same gesture math as the
+         Unity runtime (see GestureMath.cs). Requires .NET 8 SDK. -->
+  </PropertyGroup>
+
+</Project>

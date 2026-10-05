@@ -1,0 +1,49 @@
+{
+  "gestureDictionaryVersion": "v1",
+  "layers": [
+    {
+      "bundleUrl": "https://cdn.example.com/xr-layers/dragon.glb",
+      "initialState": "Appear",
+      "layerId": "layer_01",
+      "placement": {
+        "mode": "headLocked",
+        "offset": [
+          0.0,
+          0.1,
+          0.6
+        ]
+      },
+      "spawnAtMs": 1000
+    },
+    {
+      "bundleUrl": "https://cdn.example.com/xr-layers/castle.glb",
+      "initialState": "Appear",
+      "layerId": "layer_02",
+      "placement": {
+        "mode": "headLocked",
+        "offset": [
+          0.0,
+          0.1,
+          0.6
+        ]
+      },
+      "spawnAtMs": 4500
+    },
+    {
+      "bundleUrl": "https://cdn.example.com/xr-layers/spaceship.glb",
+      "initialState": "Appear",
+      "layerId": "layer_03",
+      "placement": {
+        "mode": "headLocked",
+        "offset": [
+          0.0,
+          0.1,
+          0.6
+        ]
+      },
+      "spawnAtMs": 7500
+    }
+  ],
+  "manifestVersion": "1.0",
+  "videoId": "demo-gesture-bench"
+}

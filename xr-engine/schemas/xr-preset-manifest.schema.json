@@ -1,0 +1,205 @@
+{
+  "$id": "https://github.com/GeorgiiMakarov/LIGHTWEIGHT-XR-CONTENT-ENGINE/blob/main/schemas/xr-preset-manifest.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Strict contract for one timed XR preset from the phone-side library. The phone owns the preset clock and pushes this manifest to the glasses (XR Session Protocol v1, manifest_push). Each preset carries its own content timing: layers spawn/despawn on the preset timeline, and a timed gesture only switches to the next/previous preset or closes the current one. Static by design: no eye tracking, no dynamic depth occlusion — refusal of both is an energy and privacy advantage, not a compromise. Gesture semantics are global and fixed by gestureDictionaryVersion (v1: Swipe_Right = next preset, swipe after last preset = close; Swipe_Left = previous preset; Palm_Hold ~0.8s = close now; Pinch reserved) — they are NOT rebound per preset.",
+  "properties": {
+    "displayProfile": {
+      "default": "additive",
+      "description": "Target display class. additive = optical see-through (XREAL-style): black is transparent, so presets must use bright outlines and lit fills, never dark-alpha dependence. passthrough = video see-through with opaque display (e.g. Galaxy XR): full alpha compositing allowed. Fixed per preset so creators author against a known compositor.",
+      "enum": [
+        "additive",
+        "passthrough"
+      ],
+      "type": "string"
+    },
+    "gestureDictionaryVersion": {
+      "const": "v1",
+      "description": "Versioned gesture contract. MUST match GestureDictionary.Version compiled into the XR client — ManifestParser refuses to run on mismatch. Preset-level reading of v1: Swipe_Right = next preset (after last = close), Swipe_Left = previous preset, Palm_Hold ~0.8s = close now, Pinch reserved."
+    },
+    "layers": {
+      "description": "Ordered layer stack, budget ~10 layers per preset; beyond that the client's LRU eviction applies (rev3 §3).",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "bundleUrl": {
+            "description": "State Bundle URL. GLB with baked skeletal animations (Appear, Idle, React); geometry pre-compressed with Draco/meshopt and textures in KTX2/Basis Universal by the creator pipeline (rev3 §1). May be a phone-local URI — the phone serves bundles, the glasses only render.",
+            "format": "uri",
+            "type": "string"
+          },
+          "despawnAtMs": {
+            "description": "Preset-clock time when this layer despawns. MUST be > spawnAtMs. Omitted = layer lives until the preset ends.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "fadeInMs": {
+            "default": 0,
+            "description": "Opacity ramp after spawn. Cheap soft appearance without depth sensing.",
+            "maximum": 2000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "fadeOutMs": {
+            "default": 0,
+            "description": "Opacity ramp before despawn / preset end.",
+            "maximum": 2000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "initialState": {
+            "default": "Appear",
+            "description": "Pre-baked state machine entry state (rev3 §2, §6).",
+            "enum": [
+              "Appear",
+              "Idle",
+              "React",
+              "Dismissed"
+            ],
+            "type": "string"
+          },
+          "layerId": {
+            "description": "Stable layer identifier, e.g. \"layer_01\".",
+            "pattern": "^layer_[0-9]{2}$",
+            "type": "string"
+          },
+          "placement": {
+            "additionalProperties": false,
+            "properties": {
+              "mode": {
+                "description": "v1: headLocked — object positioned in view space with a fixed offset, no dependency on CV (rev3 §4). phoneBody: v2 option — tracking the phone body as a static physical object for true 'above the screen' anchoring.",
+                "enum": [
+                  "headLocked",
+                  "phoneBody"
+                ],
+                "type": "string"
+              },
+              "offset": {
+                "default": [
+                  0.0,
+                  0.1,
+                  0.6
+                ],
+                "description": "Offset in metres, view space [x, y, z]. Example [0.0, 0.10, 0.60] ≈ 10 cm above the screen, 60 cm in front.",
+                "maxItems": 3,
+                "minItems": 3,
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "type": "object"
+          },
+          "spawnAtMs": {
+            "description": "Preset-clock time when this layer spawns (state Appear -> Idle).",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "layerId",
+          "bundleUrl",
+          "spawnAtMs"
+        ],
+        "type": "object"
+      },
+      "maxItems": 10,
+      "minItems": 1,
+      "type": "array"
+    },
+    "manifestVersion": {
+      "description": "Manifest format version. \"2.0\" = this timed-preset schema (timing is REQUIRED). v1 manifests (video-bound, no presetId/timing) are upgraded on library import by an explicit, documented rule: the phone assigns a presetId and a default timing block (durationMs: 15000, loop: false, onEnd: \"close\"; layers keep their spawnAtMs, despawnAtMs defaults to durationMs). No silent magic — the import rule is part of the contract.",
+      "pattern": "^[0-9]+\\.[0-9]+$",
+      "type": "string"
+    },
+    "presetId": {
+      "description": "Stable preset identifier in the phone-side library, e.g. \"preset_retail_spring_01\". Referenced by XR Session Protocol commands (preset_start / preset_stop / preset_switch).",
+      "pattern": "^preset_[a-z0-9_]{1,64}$",
+      "type": "string"
+    },
+    "timing": {
+      "additionalProperties": false,
+      "description": "REQUIRED in v2. The preset's own content timing on the phone-owned preset clock. t=0 is preset_start.start_at_phone_ms.",
+      "properties": {
+        "durationMs": {
+          "description": "Total preset timeline length in milliseconds. Interactive ad presets target ≤ 15000 ms.",
+          "maximum": 600000,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "loop": {
+          "default": false,
+          "description": "Restart the timeline when it ends.",
+          "type": "boolean"
+        },
+        "maxLoops": {
+          "default": 1,
+          "description": "Loop cap. Ignored when loop = false.",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "onEnd": {
+          "default": "close",
+          "description": "Behaviour when the timeline ends (and loops are exhausted): loop = restart, close = dismiss preset, hold = freeze on last frame until a gesture or preset_stop.",
+          "enum": [
+            "loop",
+            "close",
+            "hold"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "durationMs"
+      ],
+      "type": "object"
+    },
+    "transition": {
+      "additionalProperties": false,
+      "description": "How this preset appears/disappears on switch. Cheap, shader-free transitions only.",
+      "properties": {
+        "durationMs": {
+          "default": 0,
+          "description": "Fade duration. 0 with type=cut = instant switch.",
+          "maximum": 2000,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "type": {
+          "default": "cut",
+          "enum": [
+            "cut",
+            "fade"
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "videoId": {
+      "description": "Optional content binding (rev3 §5). Standalone presets (e.g. ads) omit it.",
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "manifestVersion",
+    "presetId",
+    "gestureDictionaryVersion",
+    "layers",
+    "timing"
+  ],
+  "title": "XR Preset Manifest v2 — timed preset contract (phone → glasses)",
+  "type": "object"
+}

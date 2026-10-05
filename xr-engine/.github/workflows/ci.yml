@@ -1,0 +1,118 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  python-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: pip install jsonschema
+      - name: Validate reference Character Pack
+        run: python3 tools/validate_character_pack.py examples/sample_character_pack.json
+      - name: Pack validator probe matrix (15 probes)
+        run: python3 tools/test_character_pack.py
+      - name: Validate ad template pack (schema + P1 + level/slots + hash)
+        run: python3 tools/validate_template_pack.py examples/sample_template_pack.json
+      - name: Ad template pack probe matrix (9 probes)
+        run: python3 tools/test_template_pack.py
+      - name: Reference composer demo (level 1 text composition)
+        run: |
+          python3 tools/reference_composer.py --template examples/sample_template_pack.json \
+            --profile examples/sample_profile.json --consent examples/sample_consent_receipt.json \
+            --now 2026-10-02T11:00:00+06:00 > /tmp/composed.json
+          python3 -c "import json;d=json.load(open('/tmp/composed.json'));assert d['personalized'] and d['filled_slots'][0]['value']=='Айгерим',d;print('composer OK:',d['instance_id'])"
+      - name: Reference composer probe matrix (6 probes)
+        run: python3 tools/test_reference_composer.py
+      - name: Reference pipeline check (gesture math vs 100 ms budget)
+        run: python3 tools/check_pipeline.py
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: engine
+      - uses: actions/checkout@v4
+        with:
+          repository: GeorgiiMakarov/decision-intelligence-core
+          path: decision-intelligence-core
+      - uses: actions/checkout@v4
+        with:
+          repository: GeorgiiMakarov/Defense-Dossier
+          path: Defense-Dossier
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install e2e deps (jsonschema, pydantic, cryptography)
+        run: pip install jsonschema pydantic cryptography
+      - name: E2E stack check (pack -> XR events -> decision core -> Defense-Dossier)
+        run: |
+          cd engine
+          python3 tools/e2e_stack_check.py \
+            --dic "$GITHUB_WORKSPACE/decision-intelligence-core" \
+            --dd "$GITHUB_WORKSPACE/Defense-Dossier"
+
+  emulator:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Headless gesture-pipeline testbench
+        working-directory: unity/LayerSwitcherEmulator
+        run: dotnet run -- data/sample_manifest_demo.json data/sample_gesture_stream.json
+
+  verification-report:
+    needs: [python-checks, e2e, emulator]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: pip install jsonschema
+      - name: Build verification report
+        run: |
+          {
+            echo "CI verification report"
+            echo "commit: $GITHUB_SHA"
+            echo "date (utc): $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo
+            echo "== Character Pack validation =="
+            python3 tools/validate_character_pack.py examples/sample_character_pack.json
+            echo
+            echo "== probe matrix (15 probes) =="
+            python3 tools/test_character_pack.py
+            echo
+            echo "== Ad Template Pack validation =="
+            python3 tools/validate_template_pack.py examples/sample_template_pack.json
+            echo
+            echo "== ad template pack probe matrix (9 probes) =="
+            python3 tools/test_template_pack.py
+            echo
+            echo "== reference composer demo =="
+            python3 tools/reference_composer.py --template examples/sample_template_pack.json \
+              --profile examples/sample_profile.json --consent examples/sample_consent_receipt.json \
+              --now 2026-10-02T11:00:00+06:00
+            echo
+            echo "== reference composer probe matrix (6 probes) =="
+            python3 tools/test_reference_composer.py
+            echo
+            echo "== reference pipeline =="
+            python3 tools/check_pipeline.py
+          } > ci-verification.txt 2>&1
+          cat ci-verification.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ci-verification
+          path: ci-verification.txt

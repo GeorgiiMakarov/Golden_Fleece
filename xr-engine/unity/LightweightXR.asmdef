@@ -1,0 +1,1 @@
+{"allowUnsafeCode":false,"autoReferenced":true,"defineConstraints":[],"excludePlatforms":[],"includePlatforms":[],"name":"LightweightXR","noEngineReferences":false,"overrideReferences":false,"precompiledReferences":[],"references":["Unity.XR.Hands","GLTFast"],"rootNamespace":"LightweightXR","versionDefines":[]}
