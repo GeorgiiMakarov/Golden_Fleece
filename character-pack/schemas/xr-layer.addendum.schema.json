@@ -1,0 +1,371 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Character Pack addendum A1: xr_layer and provenance",
+  "description": "Optional blocks on top of Character Pack Spec v1. Packs without xr_layer remain valid v1 packs unless they claim the xr_glasses surface. Objects are closed (additionalProperties false) on purpose: a typo in a gate contract must fail loudly.",
+  "type": "object",
+  "properties": {
+    "xr_layer": { "$ref": "#/$defs/xr_layer" },
+    "provenance": { "$ref": "#/$defs/provenance" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9_.-]{1,64}$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "ts": { "type": "string", "format": "date-time" },
+    "vec3": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
+    "nonblank": { "type": "string", "minLength": 1, "pattern": "\\S" },
+
+    "xr_layer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "addendum_version", "goal", "jurisdictions", "device_classes", "target_profiles",
+        "frames", "registration", "keep_out", "safe_state", "states", "media",
+        "safety", "disclosure", "determinism", "audit"
+      ],
+      "properties": {
+        "addendum_version": { "const": "A1" },
+        "goal": { "const": "moving_robot_overlay" },
+        "jurisdictions": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[A-Z]{2}$" }
+        },
+        "device_classes": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": { "enum": ["audio_ai_glasses", "display_ai_glasses", "wired_xr_glasses", "xr_headset"] }
+        },
+        "target_profiles": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["robot_profile_id", "min_profile_version"],
+            "properties": {
+              "robot_profile_id": { "$ref": "#/$defs/id" },
+              "min_profile_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?$" }
+            }
+          }
+        },
+        "frames": {
+          "type": "object", "additionalProperties": false,
+          "required": ["robot_frame", "handedness", "up", "forward", "units"],
+          "properties": {
+            "robot_frame": { "enum": ["base_link", "torso_link", "head_link"] },
+            "handedness": { "const": "right" },
+            "up": { "const": "z" },
+            "forward": { "const": "x" },
+            "units": { "const": "m" }
+          }
+        },
+        "registration": {
+          "type": "object", "additionalProperties": false,
+          "required": ["accepted_modes", "max_speed_mps", "max_turn_rate_dps", "latency_budget_ms",
+                       "prediction", "pose_rate_hz_min", "loss_policy"],
+          "properties": {
+            "accepted_modes": {
+              "type": "array", "minItems": 1, "uniqueItems": true,
+              "items": { "enum": ["marker", "telemetry", "hybrid"] }
+            },
+            "max_speed_mps": { "type": "number", "minimum": 0, "maximum": 3 },
+            "max_turn_rate_dps": { "type": "number", "minimum": 0, "maximum": 360 },
+            "latency_budget_ms": {
+              "type": "object", "additionalProperties": false,
+              "required": ["pose_to_photon", "event_to_photon"],
+              "properties": {
+                "pose_to_photon": { "type": "number", "minimum": 1, "maximum": 500 },
+                "event_to_photon": { "type": "number", "minimum": 1, "maximum": 1000 }
+              }
+            },
+            "prediction": { "enum": ["none", "constant_velocity"] },
+            "pose_rate_hz_min": { "type": "number", "minimum": 5, "maximum": 120 },
+            "loss_policy": {
+              "type": "object", "additionalProperties": false,
+              "required": ["hold_ms", "fade_ms", "degrade_to"],
+              "properties": {
+                "hold_ms": { "type": "integer", "minimum": 0, "maximum": 5000 },
+                "fade_ms": { "type": "integer", "minimum": 0, "maximum": 5000 },
+                "degrade_to": { "enum": ["T0", "T1"] }
+              }
+            }
+          }
+        },
+        "keep_out": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["id", "frame", "min", "max"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "frame": { "enum": ["base", "torso", "head"] },
+              "min": { "$ref": "#/$defs/vec3" },
+              "max": { "$ref": "#/$defs/vec3" }
+            }
+          }
+        },
+        "safe_state": { "$ref": "#/$defs/id" },
+        "states": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/state_entry" }
+        },
+        "media": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/media_entry" }
+        },
+        "safety": {
+          "type": "object", "additionalProperties": false,
+          "required": ["max_flash_hz", "max_fov_coverage_pct", "min_caption_angle_deg",
+                       "estop_response_ms", "wearer_motion_policy"],
+          "properties": {
+            "max_flash_hz": { "type": "number", "minimum": 0, "maximum": 60 },
+            "max_fov_coverage_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+            "min_caption_angle_deg": { "type": "number", "minimum": 0.1, "maximum": 10 },
+            "estop_response_ms": { "type": "integer", "minimum": 1, "maximum": 5000 },
+            "wearer_motion_policy": { "enum": ["reduce_to_T1", "reduce_to_T0"] }
+          }
+        },
+        "disclosure": {
+          "type": "object", "additionalProperties": false,
+          "required": ["ai_generated", "placement", "labels"],
+          "properties": {
+            "ai_generated": { "const": true },
+            "placement": { "const": "persistent_badge" },
+            "labels": {
+              "type": "object", "additionalProperties": false,
+              "required": ["kk", "ru", "en"],
+              "properties": {
+                "kk": { "type": "string" },
+                "ru": { "type": "string" },
+                "en": { "type": "string" }
+              }
+            }
+          }
+        },
+        "determinism": {
+          "type": "object", "additionalProperties": false,
+          "required": ["deterministic", "seed_from"],
+          "properties": {
+            "deterministic": { "const": true },
+            "seed_from": { "const": "event_id" }
+          }
+        },
+        "audit": {
+          "type": "object", "additionalProperties": false,
+          "required": ["viewer_id", "pii", "in_view_metric", "retention_days"],
+          "properties": {
+            "viewer_id": { "const": "pseudonymous_rotating" },
+            "pii": { "const": "none" },
+            "in_view_metric": { "const": "bucketed_ms" },
+            "retention_days": { "type": "integer", "minimum": 1, "maximum": 365 }
+          }
+        }
+      }
+    },
+
+    "state_entry": {
+      "type": "object", "additionalProperties": false,
+      "required": ["motion", "tiers"],
+      "properties": {
+        "motion": { "enum": ["any", "stationary"] },
+        "moving_fallback": { "$ref": "#/$defs/id" },
+        "tiers": {
+          "type": "object", "additionalProperties": false,
+          "required": ["T0"],
+          "properties": {
+            "T0": {
+              "type": "object", "additionalProperties": false,
+              "required": ["captions"],
+              "properties": {
+                "captions": { "const": true },
+                "audio": { "enum": ["none", "host_tts"] }
+              }
+            },
+            "T1": {
+              "type": "object", "additionalProperties": false,
+              "required": ["asset"],
+              "properties": { "asset": { "$ref": "#/$defs/id" } }
+            },
+            "T2": { "$ref": "#/$defs/tier_t2" }
+          }
+        }
+      }
+    },
+
+    "tier_t2": {
+      "type": "object", "additionalProperties": false,
+      "required": ["render", "asset", "attach", "tolerance_class", "bounds_m", "facing", "speaking_driver"],
+      "properties": {
+        "render": { "enum": ["billboard", "glb"] },
+        "asset": { "$ref": "#/$defs/id" },
+        "attach": {
+          "type": "object", "additionalProperties": false,
+          "required": ["frame", "offset_m", "yaw_deg"],
+          "properties": {
+            "frame": { "enum": ["base", "torso", "head"] },
+            "offset_m": { "$ref": "#/$defs/vec3" },
+            "yaw_deg": { "type": "number", "minimum": -180, "maximum": 180 }
+          }
+        },
+        "tolerance_class": { "enum": ["precise", "body_adjacent", "loose"] },
+        "bounds_m": {
+          "type": "object", "additionalProperties": false,
+          "required": ["min", "max"],
+          "properties": { "min": { "$ref": "#/$defs/vec3" }, "max": { "$ref": "#/$defs/vec3" } }
+        },
+        "facing": { "enum": ["viewer_yaw_only", "fixed"] },
+        "speaking_driver": { "enum": ["envelope", "viseme_lite", "none"] },
+        "viseme_assets": {
+          "type": "array", "maxItems": 8, "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        }
+      }
+    },
+
+    "media_entry": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "watermark_free"],
+      "properties": {
+        "kind": { "enum": ["video_alpha", "image", "image_sequence", "glb"] },
+        "width": { "type": "integer", "minimum": 1, "maximum": 8192 },
+        "height": { "type": "integer", "minimum": 1, "maximum": 8192 },
+        "fps": { "type": "number", "minimum": 1, "maximum": 120 },
+        "duration_ms": { "type": "integer", "minimum": 0, "maximum": 600000 },
+        "alpha_mode": { "enum": ["packed_lr", "packed_tb", "native_vp9", "none"] },
+        "has_audio": { "type": "boolean" },
+        "watermark_free": { "type": "boolean" },
+        "loop": {
+          "type": "object", "additionalProperties": false,
+          "required": ["in_ms", "out_ms"],
+          "properties": {
+            "in_ms": { "type": "integer", "minimum": 0 },
+            "out_ms": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "triangles": { "type": "integer", "minimum": 0 },
+        "texture_max_px": { "type": "integer", "minimum": 1 }
+      }
+    },
+
+    "provenance": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "creator", "generation", "terms_evidence",
+                   "similarity_screening", "human_review", "content_credentials"],
+      "properties": {
+        "schema_version": { "const": "A1" },
+        "creator": {
+          "type": "object", "additionalProperties": false,
+          "required": ["role", "org_id"],
+          "properties": {
+            "role": { "enum": ["distributor", "owner", "platform"] },
+            "org_id": { "$ref": "#/$defs/nonblank" }
+          }
+        },
+        "generation": {
+          "type": "object", "additionalProperties": false,
+          "required": ["platform", "jobs"],
+          "properties": {
+            "platform": { "enum": ["higgsfield-ai", "other"] },
+            "platform_name": { "type": "string" },
+            "jobs": {
+              "type": "array",
+              "items": {
+                "type": "object", "additionalProperties": false,
+                "required": ["job_id", "model", "generated_at", "produces_assets"],
+                "properties": {
+                  "job_id": { "$ref": "#/$defs/nonblank" },
+                  "model": { "$ref": "#/$defs/nonblank" },
+                  "model_version": { "type": "string" },
+                  "generated_at": { "$ref": "#/$defs/ts" },
+                  "prompt_sha256": { "$ref": "#/$defs/sha256" },
+                  "seed": { "type": "integer" },
+                  "produces_assets": {
+                    "type": "array", "minItems": 1, "uniqueItems": true,
+                    "items": { "$ref": "#/$defs/id" }
+                  },
+                  "reference_inputs": {
+                    "type": "array",
+                    "items": {
+                      "type": "object", "additionalProperties": false,
+                      "required": ["sha256", "rights"],
+                      "properties": {
+                        "sha256": { "$ref": "#/$defs/sha256" },
+                        "rights": { "enum": ["owned", "licensed", "third_party", "unknown"] },
+                        "evidence_sha256": { "$ref": "#/$defs/sha256" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post_processing": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["step", "tool", "asset_ids"],
+            "properties": {
+              "step": { "enum": ["matting", "loop_trim", "color_grade", "upscale", "image_to_3d", "packed_alpha", "transcode", "other"] },
+              "tool": { "$ref": "#/$defs/nonblank" },
+              "tool_version": { "type": "string" },
+              "asset_ids": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/id" } }
+            }
+          }
+        },
+        "hand_made_assets": {
+          "type": "array", "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "terms_evidence": {
+          "type": "object", "additionalProperties": false,
+          "required": ["terms_effective_date", "captured_at", "plan_kind", "commercial_use",
+                       "watermark_free", "training_exposure", "evidence_sha256"],
+          "properties": {
+            "terms_effective_date": { "type": "string", "format": "date" },
+            "captured_at": { "$ref": "#/$defs/ts" },
+            "plan_kind": { "enum": ["free", "paid", "enterprise"] },
+            "commercial_use": { "type": "boolean" },
+            "watermark_free": { "type": "boolean" },
+            "training_exposure": { "enum": ["default_may_train", "enterprise_excluded"] },
+            "evidence_sha256": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        "similarity_screening": {
+          "type": "object", "additionalProperties": false,
+          "required": ["method", "tool_version", "corpus_version", "result", "screened_at", "report_sha256"],
+          "properties": {
+            "method": { "$ref": "#/$defs/nonblank" },
+            "tool_version": { "$ref": "#/$defs/nonblank" },
+            "corpus_version": { "$ref": "#/$defs/nonblank" },
+            "result": { "enum": ["pass", "manual_review", "fail"] },
+            "screened_at": { "$ref": "#/$defs/ts" },
+            "report_sha256": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        "human_review": {
+          "type": "object", "additionalProperties": false,
+          "required": ["reviewer_ref", "decision", "reviewed_at"],
+          "properties": {
+            "reviewer_ref": { "$ref": "#/$defs/nonblank" },
+            "decision": { "enum": ["approved", "rejected"] },
+            "reviewed_at": { "$ref": "#/$defs/ts" }
+          }
+        },
+        "human_authorship": {
+          "type": "object", "additionalProperties": false,
+          "required": ["statement", "design_bible_sha256"],
+          "properties": {
+            "statement": { "type": "string" },
+            "design_bible_sha256": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        "content_credentials": {
+          "type": "object", "additionalProperties": false,
+          "required": ["machine_readable", "method"],
+          "properties": {
+            "machine_readable": { "type": "boolean" },
+            "method": { "enum": ["c2pa", "platform_watermark_metadata", "other", "none"] },
+            "manifest_sha256": { "$ref": "#/$defs/sha256" }
+          }
+        }
+      }
+    }
+  }
+}

@@ -81,3 +81,41 @@ Editor on a CPU runner — C# must compile, compute shaders must import, and
 every kernel the driver looks up must resolve (EditMode test, no dispatch).
 Unity/GPU verification runs on local hardware, not in CI (no GPU on free
 runners).
+
+## What lives here now
+
+**1. Fluid Preset Studio** (original) — offline Navier-Stokes bakes → deterministic
+flipbook presets for XR. Zero runtime simulation cost.
+
+**2. ScriptCheckup v2.4.1** (`scriptcheckup/`) — Roslyn-based static analyzer for
+Unity C# scripts. 46 rules across 6 families:
+- **RB** (readback stalls: `ReadPixels`, `GetTemporary` leaks, `AsyncGPUReadback` …)
+- **UW** (per-frame waste: `GetComponent`/`Find`/`Camera.main` in `Update` …)
+- **UL** (lint: allocations, API hygiene), **RX** (domain/scene-reload survival)
+- **UE** (brace balance, missing `using`), **DF** (path-sensitive dataflow:
+  RenderTexture leases, null-tracking, dead stores)
+
+  Fail-closed CLI: exit `0` clean / `1` warnings / `2` rule violations /
+  `3` infrastructure failure (analyzer crash, syntax errors via synthetic rule
+  UE000, zero files). SARIF 2.1 with stable fingerprints, version from the
+  binary. CI (`scriptcheckup` workflow): build + `dotnet test` + informational
+  analysis of `unity-package/` and `unity-project/Assets`.
+
+**3. Character Pack + XR layer A1** (`character-pack/`) — content contract for
+robot characters with an XR layer over a *moving* robot:
+- `docs/character-pack-spec-v1.md` — spec v1 + addendum A1: display tiers
+  T0 (subtitles) / T1 (head-locked card) / T2 (robot-attached layer),
+  marker / telemetry / hybrid registration with an error budget
+  (e ≈ v·L — at 0.8 m/s and 100 ms ≈ 8 cm, so faces stay on the robot display),
+  distributor avatars via Higgsfield AI (2.5D clips, provenance per generation
+  job), KZ AI-law disclosure («Создано ИИ» + machine-readable marking)
+- `tools/validate_xr_layer.py` — 104-probe gate (35 rules: XR*/PV*/WV*):
+  JSON Schema, registration budgets, safety, provenance, waivers with reason /
+  approver / expiry, severity policy, SARIF, exit 0/1/2/3 (fail-closed)
+- `schemas/` — addendum schema + patched base schema (optional `xr_layer`,
+  `provenance`, asset kind `xr_clip`)
+- `examples/` — real pack (regression) + XR sample pack + waiver example
+- `policy/xr-gate-policy.v1.json` — versioned limits; every number is a pilot
+  hypothesis until measured on hardware (§10.10)
+
+Nothing here drives the robot: content, analysis and audit only.

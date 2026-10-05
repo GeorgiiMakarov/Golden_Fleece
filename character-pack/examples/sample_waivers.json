@@ -1,0 +1,14 @@
+{
+  "_note": "FORMAT EXAMPLE. Not for the clean sample pack: the fingerprint belongs to the PV008 finding that appears when provenance.terms_evidence.training_exposure is default_may_train. Take real fingerprints from the validator report (fp=...). approver_org must differ from provenance.creator.org_id.",
+  "waivers": [
+    {
+      "rule": "PV008",
+      "fingerprint": "f1912a87e16f0e08",
+      "pack_version": "1.1.0",
+      "reason": "Character is not confidential; default plan accepted for the pilot, ticket PILOT-42",
+      "approver": "Platform content reviewer",
+      "approver_org": "platform-demo",
+      "expires": "2026-12-31"
+    }
+  ]
+}

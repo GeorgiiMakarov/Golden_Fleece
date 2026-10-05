@@ -1,0 +1,31 @@
+# Pretty-printed for review only. The shipped file keeps the repository format (minified, sorted keys, no trailing newline).
+# Three additions, nothing removed: root properties xr_layer and provenance, and asset kind xr_clip.
+
+--- a/schemas/character-pack.schema.json
++++ b/schemas/character-pack.schema.json
+@@ -23,5 +23,6 @@
+               "glb_bundle",
+               "audio",
+-              "image"
++              "image",
++              "xr_clip"
+             ]
+           },
+@@ -112,4 +113,8 @@
+       "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)$",
+       "type": "string"
++    },
++    "provenance": {
++      "description": "Optional addendum A1: origin of the avatars (generation jobs, platform terms evidence, similarity screening, human review). Validated by tools/validate_xr_layer.py against schemas/xr-layer.addendum.schema.json.",
++      "type": "object"
+     },
+     "spec_version": {
+@@ -251,4 +256,8 @@
+       "type": "array",
+       "uniqueItems": true
++    },
++    "xr_layer": {
++      "description": "Optional addendum A1: XR layer over a moving robot (tiers, registration, safety, disclosure). Validated by tools/validate_xr_layer.py against schemas/xr-layer.addendum.schema.json. A pack without it is a plain v1 pack.",
++      "type": "object"
+     }
+   },

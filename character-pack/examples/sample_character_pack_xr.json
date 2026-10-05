@@ -1,0 +1,819 @@
+{
+  "assets": [
+    {
+      "asset_id": "aru_idle_clip",
+      "bytes": 0,
+      "kind": "expression_clip",
+      "sha256": "8539f1f17648df7089b3ce3843fe72a240f3bbf3c59820654876b775fcd74617",
+      "uri": "pack://assets/aru_idle_clip.bin"
+    },
+    {
+      "asset_id": "aru_greet_clip",
+      "bytes": 0,
+      "kind": "expression_clip",
+      "sha256": "392613f94aef2523ab7e4391d280bab47da9582779fce665800697977f3be210",
+      "uri": "pack://assets/aru_greet_clip.bin"
+    },
+    {
+      "asset_id": "aru_listen_clip",
+      "bytes": 0,
+      "kind": "expression_clip",
+      "sha256": "25203385b001bd90f85eedff4bd18fd2197271a728f6f1df391148ab5235c40c",
+      "uri": "pack://assets/aru_listen_clip.bin"
+    },
+    {
+      "asset_id": "aru_speak_clip",
+      "bytes": 0,
+      "kind": "expression_clip",
+      "sha256": "101654c50ff6c0bcf48bdec241277d04f66100f4e00cc494187d075397ed16bb",
+      "uri": "pack://assets/aru_speak_clip.bin"
+    },
+    {
+      "asset_id": "aru_bye_clip",
+      "bytes": 0,
+      "kind": "expression_clip",
+      "sha256": "eb1a950644c2349c04ac917ef27214999200bc022f61e1731f6c38482d695b43",
+      "uri": "pack://assets/aru_bye_clip.bin"
+    },
+    {
+      "asset_id": "aru_xr_bundle",
+      "bytes": 0,
+      "kind": "glb_bundle",
+      "sha256": "f9c7455659a53fde2bef8985dcd5ab9d7db66c9a0542b2655e2d4d6c65ca56bf",
+      "uri": "pack://assets/aru.glb"
+    },
+    {
+      "asset_id": "aru_xr_card",
+      "bytes": 320000,
+      "kind": "image",
+      "sha256": "602cb30e0dc8b1102a62c74c737cddd97e0b7832b29125c368ce05fc97f7d81b",
+      "uri": "pack://assets/aru_xr_card.png"
+    },
+    {
+      "asset_id": "aru_xr_idle",
+      "bytes": 2100000,
+      "kind": "xr_clip",
+      "sha256": "a803d47dea1f13e261734d198a6a656fde396975ce02a641d775303e38c8f89f",
+      "uri": "pack://assets/aru_xr_idle.mp4"
+    },
+    {
+      "asset_id": "aru_xr_greeting",
+      "bytes": 2000000,
+      "kind": "xr_clip",
+      "sha256": "7b30a8d85983a848c502ba9f6bb0f8a061aedc8073666bc02ea6d23612675bc1",
+      "uri": "pack://assets/aru_xr_greeting.mp4"
+    },
+    {
+      "asset_id": "aru_xr_listening",
+      "bytes": 2000000,
+      "kind": "xr_clip",
+      "sha256": "5b90572b1b0ca1b666f4d269f05f48d2aef45ec1ad85ea21915e66bfab71957f",
+      "uri": "pack://assets/aru_xr_listening.mp4"
+    },
+    {
+      "asset_id": "aru_xr_speaking",
+      "bytes": 2400000,
+      "kind": "xr_clip",
+      "sha256": "828f9986d37ea6bb2d85b9a22adab58f4f39b1b9696e9bbd2c8fba3aa87b87ca",
+      "uri": "pack://assets/aru_xr_speaking.mp4"
+    },
+    {
+      "asset_id": "aru_xr_farewell",
+      "bytes": 1900000,
+      "kind": "xr_clip",
+      "sha256": "82e5257ce70435d1411d077347bee75b8f6033f0c14ba13877d806e2c63d952f",
+      "uri": "pack://assets/aru_xr_farewell.mp4"
+    },
+    {
+      "asset_id": "aru_xr_walking",
+      "bytes": 2200000,
+      "kind": "xr_clip",
+      "sha256": "c15bf31b22885a050b5ad515c6690c10afb15578e12b82eea07fd54dd983eb00",
+      "uri": "pack://assets/aru_xr_walking.mp4"
+    }
+  ],
+  "character": {
+    "created_date": "2026-09-23",
+    "description": "Aru is an original friendly guide character for QAZBOT service robots: warm, concise, speaks Kazakh, Russian and English. No third-party IP used in name, likeness or backstory.",
+    "designer": "QAZBOT Content Studio (reference)",
+    "name": "Aru",
+    "original_design": true,
+    "persona": "You are Aru, a friendly guide. Greet visitors warmly, keep answers short, never claim to be human. Tone: light, respectful."
+  },
+  "fallback_state": "idle",
+  "locales": [
+    "kk",
+    "ru",
+    "en"
+  ],
+  "pack_id": "pack_aru_guide_xr",
+  "pack_version": "1.1.0",
+  "provenance": {
+    "content_credentials": {
+      "machine_readable": true,
+      "manifest_sha256": "cf12ee5030bf490904e64f37dfebc9b5434d9f3707d0c5573320ae3b5b51b2f0",
+      "method": "c2pa"
+    },
+    "creator": {
+      "org_id": "distributor-demo",
+      "role": "distributor"
+    },
+    "generation": {
+      "jobs": [
+        {
+          "generated_at": "2026-10-01T09:00:00Z",
+          "job_id": "demo-job-001",
+          "model": "demo-model",
+          "model_version": "0",
+          "produces_assets": [
+            "aru_xr_card",
+            "aru_xr_idle",
+            "aru_xr_greeting",
+            "aru_xr_listening",
+            "aru_xr_speaking",
+            "aru_xr_farewell",
+            "aru_xr_walking"
+          ],
+          "prompt_sha256": "71caa394c70c8653e319bd3ed67c4207189b70d48ab84d2cad3d9e9167612075",
+          "reference_inputs": []
+        }
+      ],
+      "platform": "higgsfield-ai"
+    },
+    "human_authorship": {
+      "design_bible_sha256": "df100f9150480e65a834a79139afbcd92c78a0bee6fe0327c749354fdaa2b57b",
+      "statement": "Silhouette, palette and design bible were drawn by the studio art director; selection, editing and arrangement of generated frames were done by hand."
+    },
+    "human_review": {
+      "decision": "approved",
+      "reviewed_at": "2026-10-01T15:00:00Z",
+      "reviewer_ref": "reviewer-demo"
+    },
+    "post_processing": [
+      {
+        "asset_ids": [
+          "aru_xr_idle",
+          "aru_xr_greeting",
+          "aru_xr_listening",
+          "aru_xr_speaking",
+          "aru_xr_farewell",
+          "aru_xr_walking"
+        ],
+        "step": "matting",
+        "tool": "demo-matting-tool",
+        "tool_version": "0"
+      },
+      {
+        "asset_ids": [
+          "aru_xr_idle",
+          "aru_xr_greeting",
+          "aru_xr_listening",
+          "aru_xr_speaking",
+          "aru_xr_farewell",
+          "aru_xr_walking"
+        ],
+        "step": "packed_alpha",
+        "tool": "demo-packer",
+        "tool_version": "0"
+      }
+    ],
+    "schema_version": "A1",
+    "similarity_screening": {
+      "corpus_version": "demo-2026-10",
+      "method": "demo-embedding-search",
+      "report_sha256": "4762204cf65a10ef4149411c199c692567ec64c42527cf03f73cc0daee079b98",
+      "result": "pass",
+      "screened_at": "2026-10-01T12:00:00Z",
+      "tool_version": "0"
+    },
+    "terms_evidence": {
+      "captured_at": "2026-10-01T09:05:00Z",
+      "commercial_use": true,
+      "evidence_sha256": "e5fd9c95bffc37fc7a6ebe855c36b434b38cf4653bd064c1b90ee726ffe25d78",
+      "plan_kind": "paid",
+      "terms_effective_date": "2026-08-27",
+      "training_exposure": "enterprise_excluded",
+      "watermark_free": true
+    }
+  },
+  "spec_version": "v1",
+  "states": [
+    {
+      "facial": {
+        "base_expression": "neutral",
+        "expression_clip": "aru_idle_clip"
+      },
+      "id": "idle",
+      "timing": {
+        "duration_ms": 4000,
+        "fade_in_ms": 500,
+        "fade_out_ms": 500,
+        "loop": true
+      },
+      "trigger": "genie.idle",
+      "voice_lines": {},
+      "xr": {
+        "animation": "Idle",
+        "bundle_asset": "aru_xr_bundle",
+        "fade_in_ms": 500,
+        "spawn_at_ms": 0
+      }
+    },
+    {
+      "facial": {
+        "base_expression": "happy",
+        "expression_clip": "aru_greet_clip"
+      },
+      "id": "greeting",
+      "timing": {
+        "duration_ms": 6000,
+        "fade_in_ms": 300,
+        "fade_out_ms": 300
+      },
+      "trigger": "genie.visitor_detected",
+      "voice_lines": {
+        "en": [
+          "Hello! I am Aru. How can I help?"
+        ],
+        "kk": [
+          "Сәлем! Мен Арумын. Қалай көмектесе аламын?"
+        ],
+        "ru": [
+          "Здравствуйте! Я Ару. Чем могу помочь?"
+        ]
+      },
+      "xr": {
+        "animation": "Appear",
+        "bundle_asset": "aru_xr_bundle",
+        "despawn_at_ms": 6000,
+        "fade_in_ms": 300,
+        "spawn_at_ms": 0
+      }
+    },
+    {
+      "facial": {
+        "base_expression": "attentive",
+        "expression_clip": "aru_listen_clip"
+      },
+      "id": "listening",
+      "timing": {
+        "duration_ms": 8000,
+        "loop": true
+      },
+      "trigger": "genie.listening",
+      "voice_lines": {},
+      "xr": {
+        "animation": "Idle",
+        "bundle_asset": "aru_xr_bundle",
+        "spawn_at_ms": 0
+      }
+    },
+    {
+      "facial": {
+        "base_expression": "happy",
+        "expression_clip": "aru_speak_clip"
+      },
+      "id": "speaking",
+      "timing": {
+        "duration_ms": 10000
+      },
+      "trigger": "genie.speaking",
+      "voice_lines": {
+        "en": [
+          "Here is what I found for you."
+        ],
+        "kk": [
+          "Міне, сізге тапқаным."
+        ],
+        "ru": [
+          "Вот что я для вас нашёл."
+        ]
+      },
+      "xr": {
+        "animation": "React",
+        "bundle_asset": "aru_xr_bundle",
+        "spawn_at_ms": 0
+      }
+    },
+    {
+      "facial": {
+        "base_expression": "happy",
+        "expression_clip": "aru_bye_clip"
+      },
+      "id": "farewell",
+      "timing": {
+        "duration_ms": 5000,
+        "fade_in_ms": 300,
+        "fade_out_ms": 500
+      },
+      "trigger": "genie.farewell",
+      "voice_lines": {
+        "en": [
+          "Goodbye! Have a great day!"
+        ],
+        "kk": [
+          "Сау болыңыз! Күніңіз сәтті өтсін!"
+        ],
+        "ru": [
+          "До свидания! Хорошего дня!"
+        ]
+      },
+      "xr": {
+        "animation": "React",
+        "bundle_asset": "aru_xr_bundle",
+        "despawn_at_ms": 5000,
+        "spawn_at_ms": 0
+      }
+    },
+    {
+      "facial": {
+        "base_expression": "neutral",
+        "expression_clip": "aru_idle_clip"
+      },
+      "id": "walking",
+      "timing": {
+        "duration_ms": 4000,
+        "fade_in_ms": 300,
+        "fade_out_ms": 300,
+        "loop": true
+      },
+      "trigger": "genie.moving",
+      "voice_lines": {},
+      "xr": {
+        "animation": "Idle",
+        "bundle_asset": "aru_xr_bundle",
+        "spawn_at_ms": 0
+      }
+    },
+    {
+      "facial": {
+        "base_expression": "neutral",
+        "expression_clip": "aru_idle_clip"
+      },
+      "id": "safe_idle",
+      "timing": {
+        "duration_ms": 4000,
+        "loop": true
+      },
+      "trigger": "genie.safe",
+      "voice_lines": {},
+      "xr": {
+        "animation": "Idle",
+        "bundle_asset": "aru_xr_bundle",
+        "spawn_at_ms": 0
+      }
+    }
+  ],
+  "target_surfaces": [
+    "facial_display",
+    "xr_glasses"
+  ],
+  "xr_layer": {
+    "addendum_version": "A1",
+    "audit": {
+      "in_view_metric": "bucketed_ms",
+      "pii": "none",
+      "retention_days": 30,
+      "viewer_id": "pseudonymous_rotating"
+    },
+    "determinism": {
+      "deterministic": true,
+      "seed_from": "event_id"
+    },
+    "device_classes": [
+      "audio_ai_glasses",
+      "display_ai_glasses",
+      "wired_xr_glasses"
+    ],
+    "disclosure": {
+      "ai_generated": true,
+      "labels": {
+        "en": "Created by AI",
+        "kk": "Жасанды интеллект жасаған",
+        "ru": "Создано ИИ"
+      },
+      "placement": "persistent_badge"
+    },
+    "frames": {
+      "forward": "x",
+      "handedness": "right",
+      "robot_frame": "base_link",
+      "units": "m",
+      "up": "z"
+    },
+    "goal": "moving_robot_overlay",
+    "jurisdictions": [
+      "KZ"
+    ],
+    "keep_out": [
+      {
+        "frame": "head",
+        "id": "status_leds",
+        "max": [
+          0.12,
+          0.1,
+          0.1
+        ],
+        "min": [
+          0.05,
+          -0.1,
+          0.0
+        ]
+      },
+      {
+        "frame": "torso",
+        "id": "estop_button",
+        "max": [
+          0.1,
+          0.1,
+          0.1
+        ],
+        "min": [
+          -0.1,
+          -0.1,
+          0.0
+        ]
+      }
+    ],
+    "media": {
+      "aru_xr_card": {
+        "height": 1024,
+        "kind": "image",
+        "watermark_free": true,
+        "width": 1024
+      },
+      "aru_xr_farewell": {
+        "alpha_mode": "packed_lr",
+        "duration_ms": 4000,
+        "fps": 30,
+        "has_audio": false,
+        "height": 768,
+        "kind": "video_alpha",
+        "loop": {
+          "in_ms": 0,
+          "out_ms": 4000
+        },
+        "watermark_free": true,
+        "width": 1536
+      },
+      "aru_xr_greeting": {
+        "alpha_mode": "packed_lr",
+        "duration_ms": 4000,
+        "fps": 30,
+        "has_audio": false,
+        "height": 768,
+        "kind": "video_alpha",
+        "loop": {
+          "in_ms": 0,
+          "out_ms": 4000
+        },
+        "watermark_free": true,
+        "width": 1536
+      },
+      "aru_xr_idle": {
+        "alpha_mode": "packed_lr",
+        "duration_ms": 4000,
+        "fps": 30,
+        "has_audio": false,
+        "height": 768,
+        "kind": "video_alpha",
+        "loop": {
+          "in_ms": 0,
+          "out_ms": 4000
+        },
+        "watermark_free": true,
+        "width": 1536
+      },
+      "aru_xr_listening": {
+        "alpha_mode": "packed_lr",
+        "duration_ms": 4000,
+        "fps": 30,
+        "has_audio": false,
+        "height": 768,
+        "kind": "video_alpha",
+        "loop": {
+          "in_ms": 0,
+          "out_ms": 4000
+        },
+        "watermark_free": true,
+        "width": 1536
+      },
+      "aru_xr_speaking": {
+        "alpha_mode": "packed_lr",
+        "duration_ms": 4000,
+        "fps": 30,
+        "has_audio": false,
+        "height": 768,
+        "kind": "video_alpha",
+        "loop": {
+          "in_ms": 0,
+          "out_ms": 4000
+        },
+        "watermark_free": true,
+        "width": 1536
+      },
+      "aru_xr_walking": {
+        "alpha_mode": "packed_lr",
+        "duration_ms": 4000,
+        "fps": 30,
+        "has_audio": false,
+        "height": 768,
+        "kind": "video_alpha",
+        "loop": {
+          "in_ms": 0,
+          "out_ms": 4000
+        },
+        "watermark_free": true,
+        "width": 1536
+      }
+    },
+    "registration": {
+      "accepted_modes": [
+        "hybrid",
+        "marker",
+        "telemetry"
+      ],
+      "latency_budget_ms": {
+        "event_to_photon": 200,
+        "pose_to_photon": 100
+      },
+      "loss_policy": {
+        "degrade_to": "T1",
+        "fade_ms": 400,
+        "hold_ms": 300
+      },
+      "max_speed_mps": 0.8,
+      "max_turn_rate_dps": 90,
+      "pose_rate_hz_min": 30,
+      "prediction": "constant_velocity"
+    },
+    "safe_state": "safe_idle",
+    "safety": {
+      "estop_response_ms": 150,
+      "max_flash_hz": 3,
+      "max_fov_coverage_pct": 25,
+      "min_caption_angle_deg": 0.6,
+      "wearer_motion_policy": "reduce_to_T1"
+    },
+    "states": {
+      "farewell": {
+        "motion": "stationary",
+        "moving_fallback": "walking",
+        "tiers": {
+          "T0": {
+            "audio": "host_tts",
+            "captions": true
+          },
+          "T1": {
+            "asset": "aru_xr_card"
+          },
+          "T2": {
+            "asset": "aru_xr_farewell",
+            "attach": {
+              "frame": "base",
+              "offset_m": [
+                0.0,
+                -0.5,
+                1.7
+              ],
+              "yaw_deg": 0
+            },
+            "bounds_m": {
+              "max": [
+                0.25,
+                0.01,
+                0.4
+              ],
+              "min": [
+                -0.25,
+                -0.01,
+                -0.4
+              ]
+            },
+            "facing": "viewer_yaw_only",
+            "render": "billboard",
+            "speaking_driver": "none",
+            "tolerance_class": "body_adjacent"
+          }
+        }
+      },
+      "greeting": {
+        "motion": "stationary",
+        "moving_fallback": "walking",
+        "tiers": {
+          "T0": {
+            "audio": "host_tts",
+            "captions": true
+          },
+          "T1": {
+            "asset": "aru_xr_card"
+          },
+          "T2": {
+            "asset": "aru_xr_greeting",
+            "attach": {
+              "frame": "head",
+              "offset_m": [
+                0.0,
+                0.0,
+                0.25
+              ],
+              "yaw_deg": 0
+            },
+            "bounds_m": {
+              "max": [
+                0.2,
+                0.2,
+                0.4
+              ],
+              "min": [
+                -0.2,
+                -0.2,
+                0.0
+              ]
+            },
+            "facing": "viewer_yaw_only",
+            "render": "billboard",
+            "speaking_driver": "none",
+            "tolerance_class": "precise"
+          }
+        }
+      },
+      "idle": {
+        "motion": "any",
+        "tiers": {
+          "T0": {
+            "audio": "none",
+            "captions": true
+          },
+          "T1": {
+            "asset": "aru_xr_card"
+          },
+          "T2": {
+            "asset": "aru_xr_idle",
+            "attach": {
+              "frame": "base",
+              "offset_m": [
+                0.0,
+                -0.5,
+                1.7
+              ],
+              "yaw_deg": 0
+            },
+            "bounds_m": {
+              "max": [
+                0.25,
+                0.01,
+                0.4
+              ],
+              "min": [
+                -0.25,
+                -0.01,
+                -0.4
+              ]
+            },
+            "facing": "viewer_yaw_only",
+            "render": "billboard",
+            "speaking_driver": "none",
+            "tolerance_class": "body_adjacent"
+          }
+        }
+      },
+      "listening": {
+        "motion": "stationary",
+        "moving_fallback": "walking",
+        "tiers": {
+          "T0": {
+            "audio": "none",
+            "captions": true
+          },
+          "T1": {
+            "asset": "aru_xr_card"
+          },
+          "T2": {
+            "asset": "aru_xr_listening",
+            "attach": {
+              "frame": "head",
+              "offset_m": [
+                0.0,
+                0.0,
+                0.25
+              ],
+              "yaw_deg": 0
+            },
+            "bounds_m": {
+              "max": [
+                0.2,
+                0.2,
+                0.4
+              ],
+              "min": [
+                -0.2,
+                -0.2,
+                0.0
+              ]
+            },
+            "facing": "viewer_yaw_only",
+            "render": "billboard",
+            "speaking_driver": "none",
+            "tolerance_class": "precise"
+          }
+        }
+      },
+      "safe_idle": {
+        "motion": "any",
+        "tiers": {
+          "T0": {
+            "audio": "none",
+            "captions": true
+          }
+        }
+      },
+      "speaking": {
+        "motion": "any",
+        "tiers": {
+          "T0": {
+            "audio": "host_tts",
+            "captions": true
+          },
+          "T1": {
+            "asset": "aru_xr_card"
+          },
+          "T2": {
+            "asset": "aru_xr_speaking",
+            "attach": {
+              "frame": "base",
+              "offset_m": [
+                0.0,
+                -0.5,
+                1.7
+              ],
+              "yaw_deg": 0
+            },
+            "bounds_m": {
+              "max": [
+                0.25,
+                0.01,
+                0.4
+              ],
+              "min": [
+                -0.25,
+                -0.01,
+                -0.4
+              ]
+            },
+            "facing": "viewer_yaw_only",
+            "render": "billboard",
+            "speaking_driver": "envelope",
+            "tolerance_class": "body_adjacent"
+          }
+        }
+      },
+      "walking": {
+        "motion": "any",
+        "tiers": {
+          "T0": {
+            "audio": "none",
+            "captions": true
+          },
+          "T1": {
+            "asset": "aru_xr_card"
+          },
+          "T2": {
+            "asset": "aru_xr_walking",
+            "attach": {
+              "frame": "base",
+              "offset_m": [
+                0.0,
+                -0.6,
+                1.7
+              ],
+              "yaw_deg": 0
+            },
+            "bounds_m": {
+              "max": [
+                0.25,
+                0.01,
+                0.4
+              ],
+              "min": [
+                -0.25,
+                -0.01,
+                -0.4
+              ]
+            },
+            "facing": "viewer_yaw_only",
+            "render": "billboard",
+            "speaking_driver": "none",
+            "tolerance_class": "loose"
+          }
+        }
+      }
+    },
+    "target_profiles": [
+      {
+        "min_profile_version": "0.1.0",
+        "robot_profile_id": "demo-humanoid"
+      }
+    ]
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "policy_version": "1.0.0",
+  "notes": "Defaults for the pilot. Every numeric limit is a hypothesis to be confirmed or corrected by the pilot protocol (spec section 10.10). error blocks, warning passes with a mark. A rule marked non-waivable can never be waived, whoever approves. legacy_severity is the transition for packs written before A1 (no xr_layer and no provenance): XR001 and PV001 are reported with that severity for them and are errors for every pack that carries an A1 block. Remove the entries, or set them to error, to end the transition.",
+  "severity_overrides": {},
+  "legacy_severity": { "XR001": "warning", "PV001": "warning" },
+  "waivable": {
+    "XR000": false, "XR001": false, "XR002": false, "XR003": false, "XR005": false,
+    "XR006": false, "XR007": false, "XR008": true,  "XR009": false, "XR010": true,
+    "XR011": false, "XR012": false, "XR013": false, "XR014": true,  "XR015": true,
+    "XR020": true,  "XR021": true,  "XR022": false, "XR023": true,  "XR024": true,
+    "XR025": false, "XR026": false,
+    "PV001": false, "PV002": false, "PV003": false, "PV004": false, "PV005": false,
+    "PV006": false, "PV007": false, "PV008": true,  "PV009": false, "PV010": false,
+    "PV011": true,  "PV012": true,  "WV001": false
+  },
+  "limits": {
+    "tolerance_cm": { "precise": 2, "body_adjacent": 10, "loose": 30 },
+    "prediction_residual_factor": 0.5,
+    "min_lever_arm_m": 0.2,
+    "headroom_warn_ratio": 0.8,
+    "max_hold_ms": 1000,
+    "warn_hold_ms": 500,
+    "max_flash_hz": 3,
+    "max_estop_response_ms": 200,
+    "coverage_warn_pct": 30,
+    "caption_min_angle_deg": 0.6,
+    "max_retention_days": 90,
+    "allowed_fps": [24, 25, 30],
+    "max_clip_ms": 10000,
+    "min_loop_ms": 1000,
+    "max_frame_pixels": 2097152,
+    "max_xr_media_bytes": 41943040,
+    "max_glb_triangles": 50000,
+    "max_texture_px": 2048,
+    "terms_evidence_window_days": 30,
+    "max_waiver_days": 90,
+    "min_waiver_reason_chars": 15
+  }
+}
